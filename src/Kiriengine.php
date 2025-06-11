@@ -2,10 +2,6 @@
 
 namespace Core45\LaravelKiriengine;
 
-use Core45\LaravelBaselinker\Baselinker\Catalog;
-use Core45\LaravelBaselinker\Baselinker\ExternalStorage;
-use Core45\LaravelBaselinker\Baselinker\Order;
-use Core45\LaravelBaselinker\Baselinker\Shipment;
 use Core45\LaravelKiriengine\Kiriengine\Balance;
 use Core45\LaravelKiriengine\Kiriengine\Model3d;
 use Core45\LaravelKiriengine\Kiriengine\Scan3dgs;

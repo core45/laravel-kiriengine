@@ -2,7 +2,8 @@
 
 namespace Core45\LaravelKiriengine\Kiriengine;
 
-class Balance {
+class Balance extends LaravelKiriengine
+{
     public function getBalance()
     {
         $response = $this->makeRequest([
@@ -10,5 +11,10 @@ class Balance {
         ]);
 
         return $response->json();
+    }
+
+    protected function getEndpoint(): string
+    {
+        return 'balance';
     }
 }

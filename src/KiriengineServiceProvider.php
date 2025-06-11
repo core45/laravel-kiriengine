@@ -24,15 +24,13 @@ class KiriengineServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-
         // ============ Publish assets with php artisan vendor:publish ============
         if ($this->app->runningInConsole()) {
             $this->publishes([
-                __DIR__ . '/../config/laravel-kiriengine.php' => config_path('laravel-kiriengine.php'),
-            ], 'laravel-kiriengine');
+                __DIR__ . '/../config/kiriengine.php' => config_path('kiriengine.php'),
+            ], 'kiriengine');
         }
     }
-
 
     /**
      * Get the services provided by the provider.
