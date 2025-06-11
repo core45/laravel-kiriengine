@@ -6,15 +6,13 @@ class Balance extends LaravelKiriengine
 {
     public function getBalance()
     {
-        $response = $this->makeRequest([
-            'method' => __FUNCTION__,
-        ]);
+        $response = $this->makeRequest();
 
         return $response->json();
     }
 
     protected function getEndpoint(): string
     {
-        return 'balance';
+        return 'open/balance';
     }
 }
