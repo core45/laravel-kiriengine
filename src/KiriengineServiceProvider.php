@@ -3,6 +3,7 @@
 namespace Core45\LaravelKiriengine;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\Route;
 
 class KiriengineServiceProvider extends ServiceProvider
 {
@@ -36,6 +37,11 @@ class KiriengineServiceProvider extends ServiceProvider
         $this->app['config']->set('laravel-kiriengine.base_url', env('KIRIENGINE_BASE_URL', 'https://api.kiriengine.app/api/v1/'));
         $this->app['config']->set('laravel-kiriengine.debug', env('KIRIENGINE_DEBUG', false));
         $this->app['config']->set('laravel-kiriengine.verify', env('KIRIENGINE_VERIFY', true));
+
+        // Register webhook route
+        $webhookPath = config('laravel-kiriengine.webhook.path', 'kiri-engine-webhook');
+        Route::post($webhookPath, [Http\Controllers\WebhookController::class, 'handle'])
+            ->name('kiriengine.webhook');
     }
 
     /**

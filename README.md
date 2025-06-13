@@ -50,7 +50,19 @@ Add the following to your `.env` file:
 
 ```env
 KIRIENGINE_API_KEY=your_api_key_here
+KIRIENGINE_WEBHOOK_SECRET=your_webhook_secret_here
+KIRIENGINE_WEBHOOK_PATH=kiri-engine-webhook
+KIRIENGINE_STORAGE_PATH=storage/app/private/kiri-engine
 ```
+
+The webhook endpoint will be available at: `https://your-domain.com/kiri-engine-webhook` (or whatever path you configure).
+
+When KIRI Engine sends a webhook, it will:
+1. Verify the webhook signature (if KIRIENGINE_WEBHOOK_SECRET is set)
+2. Store the webhook data in JSON format in your configured storage path
+3. Log the webhook receipt and any errors
+
+You can find the webhook data files in your configured storage path, named as: `{task_id}_{timestamp}.json`
 
 #### Balance
 
