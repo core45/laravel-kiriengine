@@ -34,7 +34,13 @@ abstract class LaravelKiriengine
 
     protected function makeRequest(array $params = [], ?string $endpoint = null): \Illuminate\Http\Client\Response
     {
-        $url = "{$this->baseUrl}{$this->getEndpoint()}" . ($endpoint ? "/{$endpoint}" : '');
+        $baseEndpoint = $this->getEndpoint();
+        $url = "{$this->baseUrl}{$baseEndpoint}";
+        
+        if ($endpoint) {
+            $url .= "/{$endpoint}";
+        }
+
         $headers = [
             'Authorization' => "Bearer {$this->apiKey}",
             'Accept' => 'application/json',
