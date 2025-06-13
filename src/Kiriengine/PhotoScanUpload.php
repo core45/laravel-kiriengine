@@ -49,15 +49,33 @@ class PhotoScanUpload
             throw new KiriengineException('Maximum 300 images are allowed for photo scanning.');
         }
 
-        $response = Http::withToken($this->apiKey)
-            ->attach('imagesFiles', $images)
-            ->post("{$this->baseUrl}/api/v1/open/photo/image", [
-                'modelQuality' => $modelQuality,
-                'textureQuality' => $textureQuality,
-                'isMask' => $isMask,
-                'textureSmoothing' => $textureSmoothing,
-                'fileFormat' => $fileFormat,
-            ]);
+        $request = Http::withToken($this->apiKey);
+
+        foreach ($images as $index => $image) {
+            if (is_string($image) && file_exists(public_path($image))) {
+                $request->attach(
+                    "imagesFiles",
+                    file_get_contents(public_path($image)),
+                    basename($image)
+                );
+            } elseif (is_array($image) && isset($image['name']) && isset($image['contents'])) {
+                $request->attach(
+                    "imagesFiles",
+                    $image['contents'],
+                    $image['name']
+                );
+            } else {
+                throw new KiriengineException("Invalid image format at index {$index}");
+            }
+        }
+
+        $response = $request->post("{$this->baseUrl}/api/v1/open/photo/image", [
+            'modelQuality' => $modelQuality,
+            'textureQuality' => $textureQuality,
+            'isMask' => $isMask,
+            'textureSmoothing' => $textureSmoothing,
+            'fileFormat' => $fileFormat,
+        ]);
 
         return $this->handleResponse($response);
     }
