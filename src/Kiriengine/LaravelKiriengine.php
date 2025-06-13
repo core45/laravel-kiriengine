@@ -15,7 +15,7 @@ abstract class LaravelKiriengine
 
     public function __construct()
     {
-        $this->baseUrl = Config::get('laravel-kiriengine.base_url', 'https://api.kiriengine.app/api/v1/');
+        $this->baseUrl = Config::get('laravel-kiriengine.base_url', 'https://api.kiriengine.app/api/v1/open/');
         $this->apiKey = Config::get('laravel-kiriengine.api_key', '');
 
         if (empty($this->apiKey)) {
@@ -32,9 +32,9 @@ abstract class LaravelKiriengine
         ]);
     }
 
-    protected function makeRequest(array $params = []): \Illuminate\Http\Client\Response
+    protected function makeRequest(array $params = [], ?string $endpoint = null): \Illuminate\Http\Client\Response
     {
-        $url = "{$this->baseUrl}{$this->getEndpoint()}";
+        $url = "{$this->baseUrl}{$this->getEndpoint()}" . ($endpoint ? "/{$endpoint}" : '');
         $headers = [
             'Authorization' => "Bearer {$this->apiKey}",
             'Accept' => 'application/json',
