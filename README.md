@@ -46,17 +46,10 @@ If you find any errors or would like to help with improving and maintaining the 
 
 ### Usage
 
-First, publish the configuration file:
-
-```bash
-php artisan vendor:publish --tag=kiriengine
-```
-
 Add the following to your `.env` file:
 
 ```env
 KIRIENGINE_API_KEY=your_api_key_here
-KIRIENGINE_TEST_MODE=false
 ```
 
 #### Balance
@@ -83,6 +76,60 @@ $result = Kiriengine::scanPhoto()->create([
     'format' => 'glb'
 ]);
 ```
+
+#### Photo Scanning with Local Files
+
+If your photos are stored locally (e.g., `storage/app/photos/glass/photo1.jpg`), you can generate URLs for them using Laravel's `Storage` facade:
+
+```php
+use Illuminate\Support\Facades\Storage;
+use Core45\LaravelKiriengine\Facades\Kiriengine;
+
+$photoPaths = [
+    'photos/glass/photo1.jpg',
+    'photos/glass/photo2.jpg',
+    'photos/glass/photo3.jpg',
+];
+
+$photoUrls = array_map(fn($path) => Storage::disk('local')->url($path), $photoPaths);
+
+$result = Kiriengine::scanPhoto()->create($photoUrls);
+```
+
+> **Note:**
+> - Make sure your `local` disk is configured to be accessible (e.g., via a symbolic link with `php artisan storage:link` for the `public` disk, or by using a custom disk with a URL).
+> - If you use the `public` disk, use `Storage::disk('public')->url($path)` and store your files in `storage/app/public/photos/...`.
+
+#### Photo Scanning with Spatie Laravel Medialibrary
+
+If you use [spatie/laravel-medialibrary](https://spatie.be/docs/laravel-medialibrary) and have a gallery collection, you can easily collect the URLs for KIRI Engine:
+
+```php
+use Core45\LaravelKiriengine\Facades\Kiriengine;
+
+// Assuming $model is your Eloquent model with a 'gallery' media collection
+$photoUrls = $model->getMedia('gallery')->map(fn($media) => $media->getUrl())->toArray();
+
+$result = Kiriengine::scanPhoto()->create($photoUrls);
+```
+
+Or, if you prefer using a foreach loop:
+
+```php
+use Core45\LaravelKiriengine\Facades\Kiriengine;
+
+$photoUrls = [];
+foreach ($model->getMedia('gallery') as $media) {
+    $photoUrls[] = $media->getUrl();
+}
+
+$result = Kiriengine::scanPhoto()->create($photoUrls);
+```
+
+> **Note:**
+> - This example assumes you have set up a `gallery` media collection on your model.
+> - You can use any media collection name as needed.
+> - The `getUrl()` method will return the full accessible URL for each media item.
 
 #### Featureless Object Scanning
 
