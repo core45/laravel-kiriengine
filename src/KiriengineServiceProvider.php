@@ -9,6 +9,7 @@ use Core45\LaravelKiriengine\Kiriengine\ScanObject;
 use Core45\LaravelKiriengine\Kiriengine\PhotoScanUpload;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Config;
 
 class KiriengineServiceProvider extends ServiceProvider
 {
@@ -17,11 +18,15 @@ class KiriengineServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->mergeConfigFrom(__DIR__ . '/../config/laravel-kiriengine.php', 'laravel-kiriengine');
+        $this->mergeConfigFrom(__DIR__ . '/../config/laravel-kiriengine.php', 'kiriengine');
 
         // Register the service the package provides.
         $this->app->singleton('kiriengine', function ($app) {
-            return new Kiriengine();
+            return new Kiriengine(
+                Config::get('kiriengine.api_key'),
+                Config::get('kiriengine.api_url'),
+                Config::get('kiriengine.api_version')
+            );
         });
 
         $this->app->singleton('kiriengine.balance', function ($app) {
