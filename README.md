@@ -10,6 +10,32 @@ You can install the package via composer:
 composer require core45/laravel-kiriengine
 ```
 
+## Configuration
+
+You can publish the config file with:
+
+```bash
+php artisan vendor:publish --provider="Core45\LaravelKiriengine\KiriengineServiceProvider" --tag="config"
+```
+
+This is the contents of the published config file:
+
+```php
+return [
+    'api_key' => env('KIRIENGINE_API_KEY'),
+    'api_url' => env('KIRIENGINE_API_URL', 'https://api.kiriengine.app'),
+];
+```
+
+Add the following to your `.env` file:
+
+```env
+KIRIENGINE_API_KEY=your_api_key_here
+KIRIENGINE_API_URL=https://api.kiriengine.app
+```
+
+> **Note:** The `KIRIENGINE_API_KEY` is required. The package will throw an exception if it's not set.
+
 ## Usage
 
 ### Balance
@@ -86,23 +112,6 @@ $result = Kiriengine::photoScanUpload()->videoUpload(
 //     'serialize' => '796a6f52457844b4918db3eadd64becc',
 //     'calculateType' => 1
 // ]
-```
-
-## Configuration
-
-You can publish the config file with:
-
-```bash
-php artisan vendor:publish --provider="Core45\LaravelKiriengine\KiriengineServiceProvider" --tag="config"
-```
-
-This is the contents of the published config file:
-
-```php
-return [
-    'api_key' => env('KIRIENGINE_API_KEY'),
-    'api_url' => env('KIRIENGINE_API_URL', 'https://api.kiriengine.app'),
-];
 ```
 
 ## License

@@ -15,6 +15,10 @@ class PhotoScanUpload
     {
         $this->baseUrl = config('kiriengine.api_url', 'https://api.kiriengine.app');
         $this->apiKey = config('kiriengine.api_key');
+
+        if (empty($this->apiKey)) {
+            throw new KiriengineException('KIRIENGINE_API_KEY is not set in your .env file.');
+        }
     }
 
     /**
