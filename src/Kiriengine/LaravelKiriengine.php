@@ -34,8 +34,7 @@ abstract class LaravelKiriengine
 
     protected function makeRequest(array $params = [], ?string $endpoint = null): \Illuminate\Http\Client\Response
     {
-        $baseEndpoint = $this->getEndpoint();
-        $url = "{$this->baseUrl}{$baseEndpoint}";
+        $url = rtrim($this->baseUrl, '/');
         
         if ($endpoint) {
             $url .= "/{$endpoint}";

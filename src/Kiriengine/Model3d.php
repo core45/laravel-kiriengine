@@ -18,7 +18,7 @@ class Model3d extends LaravelKiriengine
     {
         $response = $this->makeRequest([
             'serialize' => $serialize
-        ], 'getStatus');
+        ], 'model/getStatus');
 
         return $this->handleResponse($response);
     }
@@ -34,7 +34,7 @@ class Model3d extends LaravelKiriengine
     {
         $response = $this->makeRequest([
             'serialize' => $serialize
-        ], 'getModelZip');
+        ], 'model/getModelZip');
 
         return $this->handleResponse($response);
     }
@@ -67,6 +67,6 @@ class Model3d extends LaravelKiriengine
 
     protected function getEndpoint(): string
     {
-        return 'model';
+        return '';
     }
 }
