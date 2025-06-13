@@ -206,3 +206,91 @@ class YourController extends Controller
     }
 }
 ```
+
+## Webhooks
+
+KIRI Engine can send webhooks to notify your application when a model's status changes. This package provides a webhook handler that automatically processes these notifications.
+
+### Configuration
+
+Add the following to your `.env` file:
+
+```env
+KIRIENGINE_WEBHOOK_SECRET=your_webhook_secret_here
+KIRIENGINE_WEBHOOK_PATH=kiri-engine-webhook
+KIRIENGINE_STORAGE_PATH=storage/app/private/kiri-engine
+```
+
+### Webhook Endpoint
+
+The webhook endpoint will be available at:
+```
+https://your-domain.com/kiri-engine-webhook
+```
+
+You can customize the path by changing the `KIRIENGINE_WEBHOOK_PATH` in your `.env` file.
+
+### Security
+
+The webhook handler includes security features:
+
+1. **Signature Verification**: If `KIRIENGINE_WEBHOOK_SECRET` is set, the handler will verify the webhook signature using HMAC SHA-256.
+2. **Secure Storage**: Webhook data is stored in a private directory by default.
+3. **Error Logging**: All webhook activities and errors are logged for monitoring.
+
+### Webhook Data Storage
+
+When a webhook is received:
+
+1. The data is stored as a JSON file in your configured storage path
+2. Files are named using the format: `{task_id}_{timestamp}.json`
+3. Example storage path: `storage/app/private/kiri-engine/task_123_2024-03-20_143022.json`
+
+### Example Webhook Data
+
+```json
+{
+    "task_id": "task_123",
+    "status": "completed",
+    "model_url": "https://api.kiriengine.app/api/v1/models/task_123",
+    "created_at": "2024-03-20T14:30:22Z"
+}
+```
+
+### Setting Up Webhooks in KIRI Engine
+
+1. Go to your KIRI Engine dashboard
+2. Navigate to Settings » Webhooks
+3. Add a new webhook with:
+   - Callback URL: `https://your-domain.com/kiri-engine-webhook`
+   - Signing Secret: The same value as your `KIRIENGINE_WEBHOOK_SECRET`
+
+### Error Handling
+
+The webhook handler will:
+
+- Return HTTP 200 for successful processing
+- Return HTTP 401 for invalid signatures
+- Return HTTP 500 for internal errors
+- Log all errors with detailed information
+
+### Monitoring
+
+You can monitor webhook activity through:
+
+1. Laravel logs (`storage/logs/laravel.log`)
+2. Stored webhook data files
+3. Your application's error tracking system
+
+### Testing Webhooks
+
+You can test your webhook endpoint using curl:
+
+```bash
+curl -X POST https://your-domain.com/kiri-engine-webhook \
+  -H "Content-Type: application/json" \
+  -H "X-Kiri-Signature: your_signature" \
+  -d '{"task_id":"test_123","status":"completed"}'
+```
+
+Remember to generate a valid signature if you're using webhook verification.

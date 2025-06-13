@@ -17,6 +17,11 @@ abstract class LaravelKiriengine
     {
         $this->baseUrl = Config::get('laravel-kiriengine.base_url', 'https://api.kiriengine.app/api/v1/');
         $this->apiKey = Config::get('laravel-kiriengine.api_key', '');
+
+        if (empty($this->apiKey)) {
+            throw new \Exception('KIRI Engine API key is not set. Please set KIRIENGINE_API_KEY in your .env file.');
+        }
+
         $this->debug = Config::get('laravel-kiriengine.debug', false);
         $this->verify = Config::get('laravel-kiriengine.verify', true);
 
@@ -35,10 +40,21 @@ abstract class LaravelKiriengine
             'Accept' => 'application/json',
         ];
 
+        Log::info('KIRI Engine Request', [
+            'url' => $url,
+            'headers' => $headers,
+            'params' => $params
+        ]);
+
         $response = Http::withOptions([
             'debug' => true,
             'verify' => $this->verify,
         ])->withHeaders($headers)->get($url, $params);
+
+        Log::info('KIRI Engine Response', [
+            'status' => $response->status(),
+            'body' => $response->body()
+        ]);
 
         if (!$response->successful()) {
             throw new \Exception("KIRI Engine API Error: " . $response->body());
