@@ -64,7 +64,7 @@ class KiriengineServiceProvider extends ServiceProvider
 
         // Load environment variables
         $this->app['config']->set('laravel-kiriengine.api_key', env('KIRIENGINE_API_KEY', ''));
-        $this->app['config']->set('laravel-kiriengine.base_url', env('KIRIENGINE_BASE_URL', 'https://api.kiriengine.app/api/v1/'));
+        $this->app['config']->set('laravel-kiriengine.base_url', env('KIRIENGINE_BASE_URL', 'https://api.kiriengine.app/api/v1/open/'));
         $this->app['config']->set('laravel-kiriengine.debug', env('KIRIENGINE_DEBUG', false));
         $this->app['config']->set('laravel-kiriengine.verify', env('KIRIENGINE_VERIFY', true));
         $this->app['config']->set('laravel-kiriengine.webhook.secret', env('KIRIENGINE_WEBHOOK_SECRET', ''));
