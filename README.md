@@ -1,23 +1,113 @@
-# KIRI Engine API integration for Laravel
+# Laravel Kiriengine
 
-[![Latest Version on Packagist][ico-version]][link-packagist]
-[![Total Downloads][ico-downloads]][link-downloads]
+A Laravel package for interacting with the Kiriengine API.
 
 ## Installation
 
-Install the package with composer:
+You can install the package via composer:
+
 ```bash
 composer require core45/laravel-kiriengine
 ```
 
-Optionally publish the package files:
-```
-php artisan vendor:publish --provider="Core45\LaravelKiriengine\KiriengineServiceProvider"
+## Usage
+
+### Balance
+
+```php
+use Core45\LaravelKiriengine\Facades\Kiriengine;
+
+$balance = Kiriengine::balance()->get();
 ```
 
+### Model3d
 
-The package should be auto-discovered by Laravel.
-After installation add `KIRI_KEY={your-token}` to your `.env` file.
+```php
+use Core45\LaravelKiriengine\Facades\Kiriengine;
+
+$model = Kiriengine::model3d()->get();
+```
+
+### Scan3dgs
+
+```php
+use Core45\LaravelKiriengine\Facades\Kiriengine;
+
+$scan = Kiriengine::scan3dgs()->get();
+```
+
+### ScanObject
+
+```php
+use Core45\LaravelKiriengine\Facades\Kiriengine;
+
+$scan = Kiriengine::scanObject()->get();
+```
+
+### PhotoScanUpload
+
+#### Image Upload
+```php
+use Core45\LaravelKiriengine\Facades\Kiriengine;
+
+// Upload images for photo scanning
+$result = Kiriengine::photoScanUpload()->imageUpload(
+    images: $images, // Array of image files
+    modelQuality: 0, // 0: High, 1: Medium, 2: Low, 3: Ultra
+    textureQuality: 0, // 0: 4K, 1: 2K, 2: 1K, 3: 8K
+    isMask: 0, // 0: Off, 1: On
+    textureSmoothing: 0, // 0: Off, 1: On
+    fileFormat: 'obj' // obj, fbx, stl, ply, glb, gltf, usdz, xyz
+);
+
+// Response contains:
+// [
+//     'serialize' => '796a6f52457844b4918db3eadd64becc',
+//     'calculateType' => 1
+// ]
+```
+
+#### Video Upload
+```php
+use Core45\LaravelKiriengine\Facades\Kiriengine;
+
+// Upload video for photo scanning
+$result = Kiriengine::photoScanUpload()->videoUpload(
+    videoPath: '/path/to/video.mp4',
+    modelQuality: 0, // 0: High, 1: Medium, 2: Low, 3: Ultra
+    textureQuality: 0, // 0: 4K, 1: 2K, 2: 1K, 3: 8K
+    isMask: 0, // 0: Off, 1: On
+    textureSmoothing: 0, // 0: Off, 1: On
+    fileFormat: 'obj' // obj, fbx, stl, ply, glb, gltf, usdz, xyz
+);
+
+// Response contains:
+// [
+//     'serialize' => '796a6f52457844b4918db3eadd64becc',
+//     'calculateType' => 1
+// ]
+```
+
+## Configuration
+
+You can publish the config file with:
+
+```bash
+php artisan vendor:publish --provider="Core45\LaravelKiriengine\KiriengineServiceProvider" --tag="config"
+```
+
+This is the contents of the published config file:
+
+```php
+return [
+    'api_key' => env('KIRIENGINE_API_KEY'),
+    'api_url' => env('KIRIENGINE_API_URL', 'https://api.kiriengine.app'),
+];
+```
+
+## License
+
+The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
 
 ## Usage
 
@@ -124,173 +214,3 @@ $photoUrls = $model->getMedia('gallery')->map(fn($media) => $media->getUrl())->t
 
 $result = Kiriengine::scanPhoto()->create($photoUrls);
 ```
-
-Or, if you prefer using a foreach loop:
-
-```php
-use Core45\LaravelKiriengine\Facades\Kiriengine;
-
-$photoUrls = [];
-foreach ($model->getMedia('gallery') as $media) {
-    $photoUrls[] = $media->getUrl();
-}
-
-$result = Kiriengine::scanPhoto()->create($photoUrls);
-```
-
-> **Note:**
-> - This example assumes you have set up a `gallery` media collection on your model.
-> - You can use any media collection name as needed.
-> - The `getUrl()` method will return the full accessible URL for each media item.
-
-#### Featureless Object Scanning
-
-```php
-use Core45\LaravelKiriengine\Facades\Kiriengine;
-
-// Create a new featureless object scan task
-$result = Kiriengine::scanObject()->create([
-    'https://example.com/object1.jpg',
-    'https://example.com/object2.jpg'
-], [
-    // Optional parameters
-    'quality' => 'high',
-    'format' => 'glb'
-]);
-```
-
-#### 3DGS Scanning
-
-```php
-use Core45\LaravelKiriengine\Facades\Kiriengine;
-
-// Create a new 3DGS scan task
-$result = Kiriengine::scan3dgs()->create([
-    'https://example.com/scan1.jpg',
-    'https://example.com/scan2.jpg'
-], [
-    // Optional parameters
-    'quality' => 'high',
-    'format' => 'glb'
-]);
-```
-
-#### 3D Model Status
-
-```php
-use Core45\LaravelKiriengine\Facades\Kiriengine;
-
-// Check the status of a 3D model task
-$status = Kiriengine::model3d()->getStatus('task_id_here');
-```
-
-#### Using Dependency Injection
-
-You can also use dependency injection instead of the facade:
-
-```php
-use Core45\LaravelKiriengine\Kiriengine;
-
-class YourController extends Controller
-{
-    public function __construct(private Kiriengine $kiriengine)
-    {
-    }
-
-    public function scan()
-    {
-        $result = $this->kiriengine->scanPhoto()->create([
-            'https://example.com/photo1.jpg',
-            'https://example.com/photo2.jpg'
-        ]);
-    }
-}
-```
-
-## Webhooks
-
-KIRI Engine can send webhooks to notify your application when a model's status changes. This package provides a webhook handler that automatically processes these notifications.
-
-### Configuration
-
-Add the following to your `.env` file:
-
-```env
-KIRIENGINE_WEBHOOK_SECRET=your_webhook_secret_here
-KIRIENGINE_WEBHOOK_PATH=kiri-engine-webhook
-KIRIENGINE_STORAGE_PATH=storage/app/private/kiri-engine
-```
-
-### Webhook Endpoint
-
-The webhook endpoint will be available at:
-```
-https://your-domain.com/kiri-engine-webhook
-```
-
-You can customize the path by changing the `KIRIENGINE_WEBHOOK_PATH` in your `.env` file.
-
-### Security
-
-The webhook handler includes security features:
-
-1. **Signature Verification**: If `KIRIENGINE_WEBHOOK_SECRET` is set, the handler will verify the webhook signature using HMAC SHA-256.
-2. **Secure Storage**: Webhook data is stored in a private directory by default.
-3. **Error Logging**: All webhook activities and errors are logged for monitoring.
-
-### Webhook Data Storage
-
-When a webhook is received:
-
-1. The data is stored as a JSON file in your configured storage path
-2. Files are named using the format: `{task_id}_{timestamp}.json`
-3. Example storage path: `storage/app/private/kiri-engine/task_123_2024-03-20_143022.json`
-
-### Example Webhook Data
-
-```json
-{
-    "task_id": "task_123",
-    "status": "completed",
-    "model_url": "https://api.kiriengine.app/api/v1/models/task_123",
-    "created_at": "2024-03-20T14:30:22Z"
-}
-```
-
-### Setting Up Webhooks in KIRI Engine
-
-1. Go to your KIRI Engine dashboard
-2. Navigate to Settings » Webhooks
-3. Add a new webhook with:
-   - Callback URL: `https://your-domain.com/kiri-engine-webhook`
-   - Signing Secret: The same value as your `KIRIENGINE_WEBHOOK_SECRET`
-
-### Error Handling
-
-The webhook handler will:
-
-- Return HTTP 200 for successful processing
-- Return HTTP 401 for invalid signatures
-- Return HTTP 500 for internal errors
-- Log all errors with detailed information
-
-### Monitoring
-
-You can monitor webhook activity through:
-
-1. Laravel logs (`storage/logs/laravel.log`)
-2. Stored webhook data files
-3. Your application's error tracking system
-
-### Testing Webhooks
-
-You can test your webhook endpoint using curl:
-
-```bash
-curl -X POST https://your-domain.com/kiri-engine-webhook \
-  -H "Content-Type: application/json" \
-  -H "X-Kiri-Signature: your_signature" \
-  -d '{"task_id":"test_123","status":"completed"}'
-```
-
-Remember to generate a valid signature if you're using webhook verification.

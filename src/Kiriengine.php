@@ -6,7 +6,7 @@ use Core45\LaravelKiriengine\Kiriengine\Balance;
 use Core45\LaravelKiriengine\Kiriengine\Model3d;
 use Core45\LaravelKiriengine\Kiriengine\Scan3dgs;
 use Core45\LaravelKiriengine\Kiriengine\ScanObject;
-use Core45\LaravelKiriengine\Kiriengine\ScanPhoto;
+use Core45\LaravelKiriengine\Kiriengine\PhotoScanUpload;
 
 class Kiriengine
 {
@@ -30,8 +30,8 @@ class Kiriengine
         return new ScanObject();
     }
 
-    public function scanPhoto(): ScanPhoto
+    public function photoScanUpload(): PhotoScanUpload
     {
-        return new ScanPhoto();
+        return new PhotoScanUpload();
     }
 }
