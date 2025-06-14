@@ -26,7 +26,7 @@ class WebhookController extends Controller
 
     public function handle(Request $request)
     {
-        $signature = $request->header('X-Kiri-Signature');
+        $signature = $request->header('x-signature');
 
         if (!$signature || $signature !== $this->secret) {
             Log::warning('KIRI Engine webhook: Invalid signature', [
