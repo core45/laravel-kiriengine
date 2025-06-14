@@ -45,7 +45,7 @@ class KiriengineServiceProvider extends ServiceProvider
             return new Model3d();
         });
 
-        $this->app->singleton('kiriengine.Upload3DgsScan', function ($app) {
+        $this->app->singleton('kiriengine.upload3DgsScan', function ($app) {
             return new Upload3DgsScan();
         });
 
