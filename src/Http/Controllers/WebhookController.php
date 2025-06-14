@@ -9,43 +9,36 @@ use Illuminate\Support\Facades\Log;
 
 class WebhookController extends Controller
 {
+    protected string $secret;
+
+    public function __construct() {
+        $this->secret = Config::get('laravel-kiriengine.webhook.secret', '');
+        $this->webhook_path = Config::get('laravel-kiriengine.webhook.path', '');
+
+        if (empty($this->secret)) {
+            throw new \Exception('KIRI Engine webhook secret is not set. Please set KIRIENGINE_WEBHOOK_SECRET in your .env file.');
+        }
+
+        if (empty($this->webhook_path)) {
+            throw new \Exception('KIRI Engine webhook path is not set. If you have KIRIENGINE_WEBHOOK_PATH in your .env file please check if is set correctly.');
+        }
+    }
+
     public function handle(Request $request)
     {
-        // Verify webhook signature if secret is configured
-        if ($secret = Config::get('laravel-kiriengine.webhook.secret')) {
-            $signature = $request->header('X-Kiri-Signature');
-            
-            if (!$signature || !$this->verifySignature($request->getContent(), $signature, $secret)) {
-                Log::warning('KIRI Engine webhook: Invalid signature', [
-                    'signature' => $signature,
-                    'content' => $request->getContent()
-                ]);
-                return response()->json(['error' => 'Invalid signature'], 401);
-            }
+        $signature = $request->header('X-Kiri-Signature');
+
+        if (!$signature || $signature !== $this->secret) {
+            Log::warning('KIRI Engine webhook: Invalid signature', [
+                'signature' => $signature,
+                'content' => $request->getContent()
+            ]);
+            return response()->json(['error' => 'Invalid signature'], 401);
         }
 
         try {
-            $data = $request->all();
-            
-            // Store the webhook data
-            $storagePath = Config::get('laravel-kiriengine.webhook.storage_path');
-            $filename = sprintf(
-                '%s/%s_%s.json',
-                $storagePath,
-                $data['task_id'] ?? 'unknown',
-                date('Y-m-d_His')
-            );
+            return $request->all();
 
-            Storage::put($filename, json_encode($data, JSON_PRETTY_PRINT));
-
-            // Log the webhook
-            Log::info('KIRI Engine webhook received', [
-                'task_id' => $data['task_id'] ?? 'unknown',
-                'status' => $data['status'] ?? 'unknown',
-                'stored_at' => $filename
-            ]);
-
-            return response()->json(['status' => 'success']);
         } catch (\Exception $e) {
             Log::error('KIRI Engine webhook error', [
                 'error' => $e->getMessage(),
@@ -56,9 +49,9 @@ class WebhookController extends Controller
         }
     }
 
-    protected function verifySignature(string $payload, string $signature, string $secret): bool
-    {
-        $expectedSignature = hash_hmac('sha256', $payload, $secret);
-        return hash_equals($expectedSignature, $signature);
-    }
-} 
+//    protected function verifySignature(string $payload, string $signature, string $secret): bool
+//    {
+//        $expectedSignature = hash_hmac('sha256', $payload, $secret);
+//        return hash_equals($expectedSignature, $signature);
+//    }
+}

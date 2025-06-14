@@ -25,17 +25,21 @@ abstract class LaravelKiriengine
         $this->debug = Config::get('laravel-kiriengine.debug', false);
         $this->verify = Config::get('laravel-kiriengine.verify', true);
 
-        Log::info('KIRI Engine Config', [
-            'baseUrl' => $this->baseUrl,
-            'apiKey' => $this->apiKey,
-            'endpoint' => $this->getEndpoint()
-        ]);
+        if ($this->debug) {
+            $this->verify = Config::get('laravel-kiriengine.verify', false);
+
+            Log::info('KIRI Engine Config', [
+                'baseUrl' => $this->baseUrl,
+                'apiKey' => $this->apiKey,
+                'endpoint' => $this->getEndpoint()
+            ]);
+        }
     }
 
     protected function makeRequest(array $params = [], ?string $endpoint = null): \Illuminate\Http\Client\Response
     {
         $url = rtrim($this->baseUrl, '/');
-        
+
         if ($endpoint) {
             $url .= "/{$endpoint}";
         }
@@ -45,21 +49,26 @@ abstract class LaravelKiriengine
             'Accept' => 'application/json',
         ];
 
-        Log::info('KIRI Engine Request', [
-            'url' => $url,
-            'headers' => $headers,
-            'params' => $params
-        ]);
+        if ($this->debug) {
+            Log::info('KIRI Engine Request', [
+                'url' => $url,
+                'headers' => $headers,
+                'params' => $params
+            ]);
+        }
 
         $response = Http::withOptions([
-            'debug' => true,
+            'debug' => $this->debug,
             'verify' => $this->verify,
         ])->withHeaders($headers)->get($url, $params);
 
-        Log::info('KIRI Engine Response', [
-            'status' => $response->status(),
-            'body' => $response->body()
-        ]);
+        if ($this->debug) {
+            Log::info('KIRI Engine Response', [
+                'status' => $response->status(),
+                'body' => $response->body()
+            ]);
+        }
+
 
         if (!$response->successful()) {
             throw new \Exception("KIRI Engine API Error: " . $response->body());

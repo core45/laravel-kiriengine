@@ -74,6 +74,7 @@ class KiriengineServiceProvider extends ServiceProvider
         // Register webhook route
         $webhookPath = config('laravel-kiriengine.webhook.path', 'kiri-engine-webhook');
         Route::post($webhookPath, [Http\Controllers\WebhookController::class, 'handle'])
+            ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class])
             ->name('kiriengine.webhook');
     }
 
