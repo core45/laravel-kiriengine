@@ -1,6 +1,6 @@
-# Laravel Kiriengine
+# Laravel KiriEngine
 
-A Laravel package for interacting with the Kiriengine API.
+A Laravel package for interacting with the KiriEngine API.
 
 ## Installation
 
@@ -12,73 +12,30 @@ composer require core45/laravel-kiriengine
 
 ## Configuration
 
-You can publish the config file with:
+Publish the configuration file:
 
 ```bash
-php artisan vendor:publish --provider="Core45\LaravelKiriengine\KiriengineServiceProvider" --tag="config"
+php artisan vendor:publish --provider="Core45\LaravelKiriengine\KiriengineServiceProvider"
 ```
 
-This is the contents of the published config file:
+This will create a `config/kiriengine.php` file in your config directory. You can set your API key in your `.env` file:
 
-```php
-return [
-    'api_key' => env('KIRIENGINE_API_KEY'),
-    'api_url' => env('KIRIENGINE_API_URL', 'https://api.kiriengine.app'),
-];
 ```
-
-Add the following to your `.env` file:
-
-```env
-KIRIENGINE_API_KEY=your_api_key_here
-KIRIENGINE_API_URL=https://api.kiriengine.app
+KIRIENGINE_API_KEY=your-api-key
 ```
-
-> **Note:** The `KIRIENGINE_API_KEY` is required. The package will throw an exception if it's not set.
 
 ## Usage
 
-### Balance
+### Photo Scan
 
 ```php
-use Core45\LaravelKiriengine\Facades\Kiriengine;
+use Core45\LaravelKiriengine\Kiriengine\UploadPhotoScan;
 
-$balance = Kiriengine::balance()->get();
-```
+$uploader = new UploadPhotoScan();
 
-### Model3d
-
-```php
-use Core45\LaravelKiriengine\Facades\Kiriengine;
-
-$model = Kiriengine::model3d()->get();
-```
-
-### Upload3DgsScan
-
-```php
-use Core45\LaravelKiriengine\Facades\Kiriengine;
-
-$scan = Kiriengine::Upload3DgsScan()->get();
-```
-
-### uploadObjectScan
-
-```php
-use Core45\LaravelKiriengine\Facades\Kiriengine;
-
-$scan = Kiriengine::uploadObjectScan()->get();
-```
-
-### uploadPhotoScan
-
-#### Image Upload
-```php
-use Core45\LaravelKiriengine\Facades\Kiriengine;
-
-// Upload images for photo scanning
-$result = Kiriengine::uploadPhotoScan()->imageUpload(
-    images: $images, // Array of image files
+// Upload images
+$result = $uploader->imageUpload(
+    images: $images,
     modelQuality: 0, // 0: High, 1: Medium, 2: Low, 3: Ultra
     textureQuality: 0, // 0: 4K, 1: 2K, 2: 1K, 3: 8K
     isMask: 0, // 0: Off, 1: On
@@ -86,33 +43,88 @@ $result = Kiriengine::uploadPhotoScan()->imageUpload(
     fileFormat: 'obj' // obj, fbx, stl, ply, glb, gltf, usdz, xyz
 );
 
-// Response contains:
-// [
-//     'serialize' => '796a6f52457844b4918db3eadd64becc',
-//     'calculateType' => 1
-// ]
+// Upload video
+$result = $uploader->videoUpload(
+    videoPath: $videoPath,
+    modelQuality: 0,
+    textureQuality: 0,
+    isMask: 0,
+    textureSmoothing: 0,
+    fileFormat: 'obj'
+);
 ```
 
-#### Video Upload
-```php
-use Core45\LaravelKiriengine\Facades\Kiriengine;
+### Featureless Object Scan
 
-// Upload video for photo scanning
-$result = Kiriengine::uploadPhotoScan()->videoUpload(
-    videoPath: '/path/to/video.mp4',
-    modelQuality: 0, // 0: High, 1: Medium, 2: Low, 3: Ultra
-    textureQuality: 0, // 0: 4K, 1: 2K, 2: 1K, 3: 8K
-    isMask: 0, // 0: Off, 1: On
-    textureSmoothing: 0, // 0: Off, 1: On
+```php
+use Core45\LaravelKiriengine\Kiriengine\UploadObjectScan;
+
+$uploader = new UploadObjectScan();
+
+// Upload images
+$result = $uploader->imageUpload(
+    images: $images,
     fileFormat: 'obj' // obj, fbx, stl, ply, glb, gltf, usdz, xyz
 );
 
-// Response contains:
-// [
-//     'serialize' => '796a6f52457844b4918db3eadd64becc',
-//     'calculateType' => 1
-// ]
+// Upload video
+$result = $uploader->videoUpload(
+    videoPath: $videoPath,
+    fileFormat: 'obj'
+);
 ```
+
+### 3DGS Scan
+
+```php
+use Core45\LaravelKiriengine\Kiriengine\Upload3DgsScan;
+
+$uploader = new Upload3DgsScan();
+
+// Upload images
+$result = $uploader->imageUpload(
+    images: $images,
+    isMesh: 0, // 0: Turn off 3DGS to Mesh, 1: Turn on 3DGS to Mesh
+    isMask: 0, // 0: Turn off Auto Masking, 1: Turn on Auto Object Masking
+    fileFormat: 'obj' // obj, fbx, stl, ply, glb, gltf, usdz, xyz (only used when isMesh is 1)
+);
+
+// Upload video
+$result = $uploader->videoUpload(
+    videoPath: $videoPath,
+    isMesh: 0,
+    isMask: 0,
+    fileFormat: 'obj'
+);
+```
+
+## Requirements
+
+- At least 20 images are required for all scan types
+- Maximum 300 images are allowed for all scan types
+- Video resolution must not exceed 1920x1080
+- Video duration should be no longer than 3 minutes
+
+## Response Format
+
+All upload methods return an array with the following structure:
+
+```php
+[
+    'serialize' => 'string', // Unique identifier for the task
+    'calculateType' => int // 1: Photo Scan, 2: Featureless Object Scan, 3: 3DGS Scan
+]
+```
+
+## Error Handling
+
+The package uses `KiriengineException` for error handling. All methods will throw this exception if:
+
+- The API key is not set
+- The number of images is less than 20 or more than 300
+- The video resolution exceeds 1920x1080
+- The API request fails
+- The API returns an error response
 
 ## License
 
