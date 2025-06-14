@@ -10,9 +10,17 @@ use Core45\LaravelKiriengine\Kiriengine\PhotoScanUpload;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Config;
+use Core45\LaravelKiriengine\Events\KiriWebhookReceived;
+use Core45\LaravelKiriengine\Listeners\ProcessKiriWebhook;
 
 class KiriengineServiceProvider extends ServiceProvider
 {
+    protected $listen = [
+        KiriWebhookReceived::class => [
+            ProcessKiriWebhook::class,
+        ],
+    ];
+
     /**
      * Register services.
      */

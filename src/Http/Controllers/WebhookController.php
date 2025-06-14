@@ -3,9 +3,9 @@
 namespace Core45\LaravelKiriengine\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
+use Core45\LaravelKiriengine\Events\KiriWebhookReceived;
 
 class WebhookController extends Controller
 {
@@ -37,7 +37,17 @@ class WebhookController extends Controller
         }
 
         try {
-            return $request->all();
+            $payload = $request->all();
+            $headers = $request->headers->all();
+
+            // Fire the event
+            KiriWebhookReceived::dispatch($payload, $headers);
+
+            Log::info('KIRI Engine webhook processed successfully', [
+                'payload_keys' => array_keys($payload)
+            ]);
+
+            return response()->json(['status' => 'success'], 200);
 
         } catch (\Exception $e) {
             Log::error('KIRI Engine webhook error', [
