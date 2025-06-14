@@ -54,30 +54,30 @@ use Core45\LaravelKiriengine\Facades\Kiriengine;
 $model = Kiriengine::model3d()->get();
 ```
 
-### Scan3dgs
+### Upload3DgsScan
 
 ```php
 use Core45\LaravelKiriengine\Facades\Kiriengine;
 
-$scan = Kiriengine::scan3dgs()->get();
+$scan = Kiriengine::Upload3DgsScan()->get();
 ```
 
-### ScanObject
+### uploadObjectScan
 
 ```php
 use Core45\LaravelKiriengine\Facades\Kiriengine;
 
-$scan = Kiriengine::scanObject()->get();
+$scan = Kiriengine::uploadObjectScan()->get();
 ```
 
-### PhotoScanUpload
+### uploadPhotoScan
 
 #### Image Upload
 ```php
 use Core45\LaravelKiriengine\Facades\Kiriengine;
 
 // Upload images for photo scanning
-$result = Kiriengine::photoScanUpload()->imageUpload(
+$result = Kiriengine::uploadPhotoScan()->imageUpload(
     images: $images, // Array of image files
     modelQuality: 0, // 0: High, 1: Medium, 2: Low, 3: Ultra
     textureQuality: 0, // 0: 4K, 1: 2K, 2: 1K, 3: 8K
@@ -98,7 +98,7 @@ $result = Kiriengine::photoScanUpload()->imageUpload(
 use Core45\LaravelKiriengine\Facades\Kiriengine;
 
 // Upload video for photo scanning
-$result = Kiriengine::photoScanUpload()->videoUpload(
+$result = Kiriengine::uploadPhotoScan()->videoUpload(
     videoPath: '/path/to/video.mp4',
     modelQuality: 0, // 0: High, 1: Medium, 2: Low, 3: Ultra
     textureQuality: 0, // 0: 4K, 1: 2K, 2: 1K, 3: 8K
@@ -130,8 +130,8 @@ Kiriengine API is divided into six main parts:
 
 To access any of the methods use `Kiriengine` facade and use one of the main shortcut methods followed by the API method name.
 - Kiriengine::scanPhoto()->...
-- Kiriengine::scanObject()->...
-- Kiriengine::scan3dgs()->...
+- Kiriengine::uploadObjectScan()->...
+- Kiriengine::Upload3DgsScan()->...
 - Kiriengine::model3d()->...
 - Kiriengine::balance()->...
 

@@ -7,9 +7,9 @@ use Illuminate\Support\Facades\Facade;
 /**
  * @method static \Core45\LaravelKiriengine\Kiriengine\Balance balance()
  * @method static \Core45\LaravelKiriengine\Kiriengine\Model3d model3d()
- * @method static \Core45\LaravelKiriengine\Kiriengine\Scan3dgs scan3dgs()
- * @method static \Core45\LaravelKiriengine\Kiriengine\ScanObject scanObject()
- * @method static \Core45\LaravelKiriengine\Kiriengine\PhotoScanUpload photoScanUpload()
+ * @method static \Core45\LaravelKiriengine\Kiriengine\Upload3DgsScan Upload3DgsScan()
+ * @method static \Core45\LaravelKiriengine\Kiriengine\UploadObjectScan uploadObjectScan()
+ * @method static \Core45\LaravelKiriengine\Kiriengine\UploadPhotoScan uploadPhotoScan()
  *
  * @see \Core45\LaravelKiriengine\Kiriengine
  */

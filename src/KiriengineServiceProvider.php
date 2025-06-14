@@ -4,9 +4,9 @@ namespace Core45\LaravelKiriengine;
 
 use Core45\LaravelKiriengine\Kiriengine\Balance;
 use Core45\LaravelKiriengine\Kiriengine\Model3d;
-use Core45\LaravelKiriengine\Kiriengine\Scan3dgs;
-use Core45\LaravelKiriengine\Kiriengine\ScanObject;
-use Core45\LaravelKiriengine\Kiriengine\PhotoScanUpload;
+use Core45\LaravelKiriengine\Kiriengine\Upload3DgsScan;
+use Core45\LaravelKiriengine\Kiriengine\UploadObjectScan;
+use Core45\LaravelKiriengine\Kiriengine\UploadPhotoScan;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Config;
@@ -45,16 +45,16 @@ class KiriengineServiceProvider extends ServiceProvider
             return new Model3d();
         });
 
-        $this->app->singleton('kiriengine.scan3dgs', function ($app) {
-            return new Scan3dgs();
+        $this->app->singleton('kiriengine.Upload3DgsScan', function ($app) {
+            return new Upload3DgsScan();
         });
 
-        $this->app->singleton('kiriengine.scanObject', function ($app) {
-            return new ScanObject();
+        $this->app->singleton('kiriengine.uploadObjectScan', function ($app) {
+            return new UploadObjectScan();
         });
 
-        $this->app->singleton('kiriengine.photoScanUpload', function ($app) {
-            return new PhotoScanUpload();
+        $this->app->singleton('kiriengine.uploadPhotoScan', function ($app) {
+            return new UploadPhotoScan();
         });
     }
 

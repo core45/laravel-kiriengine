@@ -2,7 +2,7 @@
 
 namespace Core45\LaravelKiriengine\Kiriengine;
 
-class Scan3dgs extends LaravelKiriengine
+class Upload3DgsScan extends LaravelKiriengine
 {
     public function create(array $photos, array $options = [])
     {

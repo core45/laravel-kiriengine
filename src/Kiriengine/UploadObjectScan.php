@@ -2,7 +2,7 @@
 
 namespace Core45\LaravelKiriengine\Kiriengine;
 
-class ScanPhoto extends LaravelKiriengine
+class UploadObjectScan extends LaravelKiriengine
 {
     public function create(array $photos, array $options = [])
     {
@@ -16,6 +16,6 @@ class ScanPhoto extends LaravelKiriengine
 
     protected function getEndpoint(): string
     {
-        return 'photo-scan';
+        return 'featureless-object-scan';
     }
 }

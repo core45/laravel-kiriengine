@@ -6,7 +6,7 @@ use Core45\LaravelKiriengine\Exceptions\KiriengineException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 
-class PhotoScanUpload
+class UploadPhotoScan
 {
     protected string $baseUrl;
     protected string $apiKey;
@@ -148,4 +148,4 @@ class PhotoScanUpload
 
         return $data['data'];
     }
-} 
+}
