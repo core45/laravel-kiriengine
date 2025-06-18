@@ -20,7 +20,7 @@ class Kiriengine
         return new Model3d();
     }
 
-    public function Upload3DgsScan(): Upload3DgsScan
+    public function upload3DgsScan(): Upload3DgsScan
     {
         return new Upload3DgsScan();
     }

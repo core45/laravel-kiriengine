@@ -10,10 +10,12 @@ use Core45\LaravelKiriengine\Events\KiriWebhookReceived;
 class WebhookController extends Controller
 {
     protected string $secret;
+    protected bool $debug;
 
     public function __construct() {
         $this->secret = Config::get('laravel-kiriengine.webhook.secret', '');
         $this->webhook_path = Config::get('laravel-kiriengine.webhook.path', '');
+        $this->debug = Config::get('laravel-kiriengine.debug', false);
 
         if (empty($this->secret)) {
             throw new \Exception('KIRI Engine webhook secret is not set. Please set KIRIENGINE_WEBHOOK_SECRET in your .env file.');
@@ -43,9 +45,11 @@ class WebhookController extends Controller
             // Fire the event
             KiriWebhookReceived::dispatch($payload, $headers);
 
-            Log::info('KIRI Engine webhook processed successfully', [
-                'payload_keys' => array_keys($payload)
-            ]);
+            if ($this->debug) {
+                Log::info('KIRI Engine webhook processed successfully', [
+                    'payload_keys' => array_keys($payload)
+                ]);
+            }
 
             return response()->json(['status' => 'success'], 200);
 
