@@ -1,10 +1,8 @@
-# Laravel KiriEngine
+# Laravel KiriEngine Package
 
-A Laravel package for interacting with the KIRI Engine API with optimized streaming uploads for large files.
+A Laravel package for integrating with the KIRI Engine API for 3D scanning and modeling.
 
 ## Installation
-
-You can install the package via composer:
 
 ```bash
 composer require core45/laravel-kiriengine
@@ -18,160 +16,155 @@ Publish the configuration file:
 php artisan vendor:publish --provider="Core45\LaravelKiriengine\KiriengineServiceProvider"
 ```
 
-This will create a `config/kiriengine.php` file in your config directory. You can set your API key in your `.env` file:
+Add your KIRI Engine API key to your `.env` file:
 
-```
-KIRIENGINE_API_KEY=your-api-key
+```env
+KIRIENGINE_API_KEY=your_api_key_here
 ```
 
 ## Usage
 
-### Photo Scan
+### Photo Scanning
 
 ```php
 use Core45\LaravelKiriengine\Kiriengine\UploadPhotoScan;
 
 $uploader = new UploadPhotoScan();
 
-// Upload images with streaming support
-$result = $uploader->imageUpload(
-    images: $images,
-    modelQuality: 0, // 0: High, 1: Medium, 2: Low, 3: Ultra
-    textureQuality: 0, // 0: 4K, 1: 2K, 2: 1K, 3: 8K
-    isMask: 0, // 0: Off, 1: On
-    textureSmoothing: 0, // 0: Off, 1: On
-    fileFormat: 'obj' // obj, fbx, stl, ply, glb, gltf, usdz, xyz
-);
+// Memory-efficient: Use file paths directly
+$images = [
+    '/path/to/image1.jpg',
+    '/path/to/image2.jpg',
+    // ... more images
+];
 
-// Upload video
-$result = $uploader->videoUpload(
-    videoPath: $videoPath,
-    modelQuality: 0,
-    textureQuality: 0,
-    isMask: 0,
-    textureSmoothing: 0,
-    fileFormat: 'obj'
-);
+$result = $uploader->imageUpload($images);
 ```
 
-### Featureless Object Scan
+### Object Scanning
 
 ```php
 use Core45\LaravelKiriengine\Kiriengine\UploadObjectScan;
 
 $uploader = new UploadObjectScan();
 
-// Upload images with streaming support
-$result = $uploader->imageUpload(
-    images: $images,
-    fileFormat: 'obj' // obj, fbx, stl, ply, glb, gltf, usdz, xyz
-);
+// Memory-efficient: Use file paths directly
+$images = [
+    '/path/to/image1.jpg',
+    '/path/to/image2.jpg',
+    // ... more images
+];
 
-// Upload video
-$result = $uploader->videoUpload(
-    videoPath: $videoPath,
-    fileFormat: 'obj'
-);
+$result = $uploader->objectUpload($images);
 ```
 
-### 3DGS Scan
+### 3DGS Scanning
 
 ```php
 use Core45\LaravelKiriengine\Kiriengine\Upload3DgsScan;
 
 $uploader = new Upload3DgsScan();
 
-// Upload images with streaming support
-$result = $uploader->imageUpload(
-    images: $images,
-    isMesh: 0, // 0: Turn off 3DGS to Mesh, 1: Turn on 3DGS to Mesh
-    isMask: 0, // 0: Turn off Auto Masking, 1: Turn on Auto Object Masking
-    fileFormat: 'obj' // obj, fbx, stl, ply, glb, gltf, usdz, xyz (only used when isMesh is 1)
-);
-
-// Upload video
-$result = $uploader->videoUpload(
-    videoPath: $videoPath,
-    isMesh: 0,
-    isMask: 0,
-    fileFormat: 'obj'
-);
-```
-
-## Streaming Upload for Large Files
-
-The package uses streaming uploads by default to handle large files efficiently without loading them all into memory.
-
-### Using File Paths (Recommended)
-
-```php
-use Core45\LaravelKiriengine\Facades\Kiriengine;
-
-// Prepare file paths instead of loading contents into memory
-$imagePaths = [];
-foreach ($modelScans as $media) {
-    $relativePath = $media->id . '/' . $media->file_name;
-    $fullPath = storage_path('app/public/' . $relativePath);
-    
-    $imagePaths[] = [
-        'path' => $fullPath,
-        'name' => $media->name
-    ];
-}
-
-// Upload with streaming (prevents memory issues with large files)
-$result = Kiriengine::uploadPhotoScan()->imageUpload(
-    images: $imagePaths
-);
-```
-
-### Alternative: Direct File Paths
-
-```php
-// Pass file paths directly as strings
-$imagePaths = [
+// Memory-efficient: Use file paths directly
+$images = [
     '/path/to/image1.jpg',
     '/path/to/image2.jpg',
-    '/path/to/image3.jpg'
+    // ... more images
 ];
 
-$result = Kiriengine::uploadPhotoScan()->imageUpload(
-    images: $imagePaths
-);
+$result = $uploader->imageUpload($images);
+```
+
+## File Upload Methods
+
+The package supports multiple ways to provide files, with **file paths being the most memory-efficient**:
+
+### 1. File Paths (Recommended - Memory Efficient)
+
+```php
+// Direct file paths - streams from disk without loading into memory
+$images = [
+    '/absolute/path/to/image1.jpg',
+    '/absolute/path/to/image2.jpg',
+    'relative/path/to/image3.jpg', // relative to public directory
+];
+```
+
+### 2. File Path Arrays
+
+```php
+// File paths in arrays - also memory efficient
+$images = [
+    ['path' => '/path/to/image1.jpg', 'name' => 'custom_name1.jpg'],
+    ['path' => '/path/to/image2.jpg'], // name defaults to basename
+];
+```
+
+### 3. Content Arrays (Not Recommended for Large Files)
+
+```php
+// Content arrays - loads entire file into memory (avoid for large files)
+$images = [
+    ['name' => 'image1.jpg', 'contents' => file_get_contents('/path/to/image1.jpg')],
+    ['name' => 'image2.jpg', 'contents' => file_get_contents('/path/to/image2.jpg')],
+];
+```
+
+## Memory Optimization
+
+**Important**: To avoid memory exhaustion when uploading many large files:
+
+1. **Use file paths** instead of loading content into memory
+2. **Process files in batches** if you have hundreds of files
+3. **Avoid `file_get_contents()`** for large files
+
+### Example: Processing Many Files
+
+```php
+// Good: Process in batches
+$allImages = [/* array of file paths */];
+$batchSize = 50;
+
+for ($i = 0; $i < count($allImages); $i += $batchSize) {
+    $batch = array_slice($allImages, $i, $batchSize);
+    $result = $uploader->imageUpload($batch);
+    // Process result...
+}
+```
+
+## API Parameters
+
+All upload methods support the following parameters:
+
+- `modelQuality` (0-3): High, Medium, Low, Ultra
+- `textureQuality` (0-3): 4K, 2K, 1K, 8K  
+- `isMask` (0-1): Auto Object Masking Off/On
+- `textureSmoothing` (0-1): Texture Smoothing Off/On
+- `fileFormat`: Output format (obj, fbx, stl, ply, glb, gltf, usdz, xyz)
+
+## Error Handling
+
+The package throws `KiriengineException` for API errors:
+
+```php
+try {
+    $result = $uploader->imageUpload($images);
+} catch (KiriengineException $e) {
+    // Handle API errors
+    Log::error('KIRI Engine error: ' . $e->getMessage());
+}
 ```
 
 ## Requirements
 
-- At least 20 images are required for all scan types
-- Maximum 300 images are allowed for all scan types
-- Video resolution must not exceed 1920x1080
-- Video duration should be no longer than 3 minutes
-
-## Response Format
-
-All upload methods return an array with the following structure:
-
-```php
-[
-    'serialize' => 'string', // Unique identifier for the task
-    'calculateType' => int // 1: Photo Scan, 2: Featureless Object Scan, 3: 3DGS Scan
-]
-```
-
-## Error Handling
-
-The package uses `KiriengineException` for error handling. All methods will throw this exception if:
-
-- The API key is not set
-- The number of images is less than 20 or more than 300
-- The video resolution exceeds 1920x1080
-- The API request fails
-- The API returns an error response
-- Files are not found when using file paths
+- Laravel 9+
+- PHP 8.1+
+- Guzzle HTTP Client
+- At least 20 images per upload (maximum 300)
 
 ## License
 
-The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
+This package is open-sourced software licensed under the [MIT license](LICENSE).
 
 ## Usage
 

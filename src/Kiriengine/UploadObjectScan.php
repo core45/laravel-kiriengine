@@ -29,12 +29,22 @@ class UploadObjectScan
      * Upload images for object scanning with streaming support
      *
      * @param array $images Array of image files or file paths
+     * @param int $modelQuality Model quality (0: High, 1: Medium, 2: Low, 3: Ultra)
+     * @param int $textureQuality Texture quality (0: 4K, 1: 2K, 2: 1K, 3: 8K)
+     * @param int $isMask Auto Object Masking (0: Off, 1: On)
+     * @param int $textureSmoothing Texture Smoothing (0: Off, 1: On)
      * @param string $fileFormat Output format (obj, fbx, stl, ply, glb, gltf, usdz, xyz)
      * @return array
      * @throws KiriengineException
      */
-    public function imageUpload(array $images, string $fileFormat = 'obj'): array
-    {
+    public function objectUpload(
+        array $images,
+        int $modelQuality = 0,
+        int $textureQuality = 0,
+        int $isMask = 0,
+        int $textureSmoothing = 0,
+        string $fileFormat = 'obj'
+    ): array {
         if (count($images) < 20) {
             throw new KiriengineException('At least 20 images are required for object scanning.');
         }
@@ -52,50 +62,82 @@ class UploadObjectScan
         
         // Add form fields
         $multipart[] = [
+            'name' => 'modelQuality',
+            'contents' => (string) $modelQuality
+        ];
+        $multipart[] = [
+            'name' => 'textureQuality',
+            'contents' => (string) $textureQuality
+        ];
+        $multipart[] = [
+            'name' => 'isMask',
+            'contents' => (string) $isMask
+        ];
+        $multipart[] = [
+            'name' => 'textureSmoothing',
+            'contents' => (string) $textureSmoothing
+        ];
+        $multipart[] = [
             'name' => 'fileFormat',
             'contents' => $fileFormat
         ];
 
         // Add files with streaming
         foreach ($images as $index => $image) {
-            $filePath = null;
-            $fileName = null;
-
             if (is_string($image)) {
-                // Direct file path
+                // Direct file path - stream directly from disk
                 if (file_exists($image)) {
-                    $filePath = $image;
-                    $fileName = basename($image);
+                    $multipart[] = [
+                        'name' => 'imagesFiles',
+                        'contents' => Utils::streamFor(fopen($image, 'r')),
+                        'filename' => basename($image)
+                    ];
                 } elseif (file_exists(public_path($image))) {
-                    $filePath = public_path($image);
-                    $fileName = basename($image);
+                    $multipart[] = [
+                        'name' => 'imagesFiles',
+                        'contents' => Utils::streamFor(fopen(public_path($image), 'r')),
+                        'filename' => basename($image)
+                    ];
                 } else {
                     throw new KiriengineException("File not found at index {$index}: {$image}");
                 }
             } elseif (is_array($image)) {
-                if (isset($image['path']) && file_exists($image['path'])) {
+                if (isset($image['path'])) {
+                    // File path in array - stream directly from disk
                     $filePath = $image['path'];
-                    $fileName = $image['name'] ?? basename($image['path']);
+                    if (file_exists($filePath)) {
+                        $multipart[] = [
+                            'name' => 'imagesFiles',
+                            'contents' => Utils::streamFor(fopen($filePath, 'r')),
+                            'filename' => $image['name'] ?? basename($filePath)
+                        ];
+                    } elseif (file_exists(public_path($filePath))) {
+                        $multipart[] = [
+                            'name' => 'imagesFiles',
+                            'contents' => Utils::streamFor(fopen(public_path($filePath), 'r')),
+                            'filename' => $image['name'] ?? basename($filePath)
+                        ];
+                    } else {
+                        throw new KiriengineException("File not found at index {$index}: {$filePath}");
+                    }
+                } elseif (isset($image['name']) && isset($image['contents'])) {
+                    // Content arrays - what KIRI API expects (but already loaded in memory)
+                    $multipart[] = [
+                        'name' => 'imagesFiles',
+                        'contents' => Utils::streamFor($image['contents']),
+                        'filename' => $image['name']
+                    ];
                 } else {
-                    throw new KiriengineException("Invalid image format at index {$index}");
+                    throw new KiriengineException("Invalid image format at index {$index}. Use file path string, or array with 'path' key, or array with 'name' and 'contents' keys.");
                 }
             } else {
                 throw new KiriengineException("Invalid image format at index {$index}");
-            }
-
-            // Add file with streaming
-            if ($filePath && $fileName) {
-                $multipart[] = [
-                    'name' => 'imagesFiles',
-                    'contents' => Utils::streamFor(fopen($filePath, 'r')),
-                    'filename' => $fileName
-                ];
             }
         }
 
         $request = new Request(
             'POST',
-            "{$this->baseUrl}/api/v1/open/featureless/image",
+            "{$this->baseUrl}/api/v1/open/object/image",
             [
                 'Authorization' => "Bearer {$this->apiKey}",
                 'Content-Type' => 'multipart/form-data',

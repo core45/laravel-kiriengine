@@ -72,38 +72,36 @@ class Upload3DgsScan
 
         // Add files with streaming
         foreach ($images as $index => $image) {
-            $filePath = null;
-            $fileName = null;
-
             if (is_string($image)) {
-                // Direct file path
+                // Direct file path - read and add as content
                 if (file_exists($image)) {
-                    $filePath = $image;
-                    $fileName = basename($image);
+                    $multipart[] = [
+                        'name' => 'imagesFiles',
+                        'contents' => Utils::streamFor(fopen($image, 'r')),
+                        'filename' => basename($image)
+                    ];
                 } elseif (file_exists(public_path($image))) {
-                    $filePath = public_path($image);
-                    $fileName = basename($image);
+                    $multipart[] = [
+                        'name' => 'imagesFiles',
+                        'contents' => Utils::streamFor(fopen(public_path($image), 'r')),
+                        'filename' => basename($image)
+                    ];
                 } else {
                     throw new KiriengineException("File not found at index {$index}: {$image}");
                 }
             } elseif (is_array($image)) {
-                if (isset($image['path']) && file_exists($image['path'])) {
-                    $filePath = $image['path'];
-                    $fileName = $image['name'] ?? basename($image['path']);
+                if (isset($image['name']) && isset($image['contents'])) {
+                    // Content arrays - what KIRI API expects
+                    $multipart[] = [
+                        'name' => 'imagesFiles',
+                        'contents' => Utils::streamFor($image['contents']),
+                        'filename' => $image['name']
+                    ];
                 } else {
                     throw new KiriengineException("Invalid image format at index {$index}");
                 }
             } else {
                 throw new KiriengineException("Invalid image format at index {$index}");
-            }
-
-            // Add file with streaming
-            if ($filePath && $fileName) {
-                $multipart[] = [
-                    'name' => 'imagesFiles',
-                    'contents' => Utils::streamFor(fopen($filePath, 'r')),
-                    'filename' => $fileName
-                ];
             }
         }
 
