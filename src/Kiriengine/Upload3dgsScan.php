@@ -25,20 +25,16 @@ class Upload3DgsScan
      * Upload images for 3DGS scanning with streaming support using cURL
      *
      * @param array $images Array of image files or file paths
-     * @param int $modelQuality Model quality (0: High, 1: Medium, 2: Low, 3: Ultra)
-     * @param int $textureQuality Texture quality (0: 4K, 1: 2K, 2: 1K, 3: 8K)
+     * @param int $isMesh Turn off/on 3DGS to Mesh (0: Off, 1: On)
      * @param int $isMask Auto Object Masking (0: Off, 1: On)
-     * @param int $textureSmoothing Texture Smoothing (0: Off, 1: On)
-     * @param string $fileFormat Output format (obj, fbx, stl, ply, glb, gltf, usdz, xyz)
+     * @param string $fileFormat Output format when isMesh=1 (obj, fbx, stl, ply, glb, gltf, usdz, xyz)
      * @return array
      * @throws KiriengineException
      */
     public function imageUpload(
         array $images,
-        int $modelQuality = 0,
-        int $textureQuality = 0,
+        int $isMesh = 0,
         int $isMask = 0,
-        int $textureSmoothing = 0,
         string $fileFormat = 'obj'
     ): array {
         if (count($images) < 20) {
@@ -54,58 +50,26 @@ class Upload3DgsScan
 
         // Build form data
         $postFields = [
-            'modelQuality' => (string) $modelQuality,
-            'textureQuality' => (string) $textureQuality,
-            'isMask' => (string) $isMask,
-            'textureSmoothing' => (string) $textureSmoothing,
-            'fileFormat' => $fileFormat,
+            'isMesh' => (string) $isMesh,
+            'isMask' => (string) $isMask
         ];
+
+        // Add fileFormat only when isMesh is enabled
+        if ($isMesh == 1) {
+            $postFields['fileFormat'] = $fileFormat;
+        }
 
         // Add files using CURLFile (streams directly without loading into memory)
         foreach ($images as $index => $image) {
-            $filePath = null;
-            $fileName = null;
-            $mimeType = null;
+            $filePath = $image;
 
-            if (is_string($image)) {
-                // Direct file path
-                $filePath = $image;
-                $fileName = basename($image);
-                $mimeType = mime_content_type($image) ?: 'image/jpeg';
-            } elseif (is_array($image)) {
-                if (isset($image['path'])) {
-                    // File path in array
-                    $filePath = $image['path'];
-                    $fileName = $image['name'] ?? basename($filePath);
-                    $mimeType = $image['mime_type'] ?? mime_content_type($filePath) ?: 'image/jpeg';
-                } elseif (isset($image['name']) && isset($image['contents'])) {
-                    // Content arrays - create temporary file to avoid memory issues
-                    $tempFile = tempnam(sys_get_temp_dir(), 'kiri_');
-                    file_put_contents($tempFile, $image['contents']);
-                    $filePath = $tempFile;
-                    $fileName = $image['name'];
-                    $mimeType = $image['mime_type'] ?? mime_content_type($tempFile) ?: 'image/jpeg';
-                } else {
-                    throw new KiriengineException("Invalid image format at index {$index}. Use file path string, or array with 'path' key, or array with 'name' and 'contents' keys.");
-                }
-            } else {
-                throw new KiriengineException("Invalid image format at index {$index}");
+            if (file_exists($filePath)) {
+                $postFields["imagesFiles[{$index}]"] = new \CURLFile(
+                    $filePath,
+                    mime_content_type($filePath) ?: 'image/jpeg',
+                    basename($filePath)
+                );
             }
-
-            // Check if file exists
-            if (!file_exists($filePath)) {
-                if (file_exists(public_path($filePath))) {
-                    $filePath = public_path($filePath);
-                } else {
-                    throw new KiriengineException("File not found at index {$index}: {$filePath}");
-                }
-            }
-
-            $postFields["imagesFiles[{$index}]"] = new \CURLFile(
-                $filePath,
-                $mimeType,
-                $fileName
-            );
         }
 
         curl_setopt_array($curl, [
@@ -117,7 +81,6 @@ class Upload3DgsScan
                 'Authorization: Bearer ' . $this->apiKey,
             ],
             CURLOPT_TIMEOUT => 900, // 15 minutes timeout for large uploads
-            CURLOPT_CONNECTTIMEOUT => 30,
         ]);
 
         $response = curl_exec($curl);

@@ -58,54 +58,20 @@ class UploadPhotoScan
             'textureQuality' => (string) $textureQuality,
             'isMask' => (string) $isMask,
             'textureSmoothing' => (string) $textureSmoothing,
-            'fileFormat' => $fileFormat,
+            'fileFormat' => $fileFormat
         ];
 
         // Add files using CURLFile (streams directly without loading into memory)
         foreach ($images as $index => $image) {
-            $filePath = null;
-            $fileName = null;
-            $mimeType = null;
+            $filePath = $image;
 
-            if (is_string($image)) {
-                // Direct file path
-                $filePath = $image;
-                $fileName = basename($image);
-                $mimeType = mime_content_type($image) ?: 'image/jpeg';
-            } elseif (is_array($image)) {
-                if (isset($image['path'])) {
-                    // File path in array
-                    $filePath = $image['path'];
-                    $fileName = $image['name'] ?? basename($filePath);
-                    $mimeType = $image['mime_type'] ?? mime_content_type($filePath) ?: 'image/jpeg';
-                } elseif (isset($image['name']) && isset($image['contents'])) {
-                    // Content arrays - create temporary file to avoid memory issues
-                    $tempFile = tempnam(sys_get_temp_dir(), 'kiri_');
-                    file_put_contents($tempFile, $image['contents']);
-                    $filePath = $tempFile;
-                    $fileName = $image['name'];
-                    $mimeType = $image['mime_type'] ?? mime_content_type($tempFile) ?: 'image/jpeg';
-                } else {
-                    throw new KiriengineException("Invalid image format at index {$index}. Use file path string, or array with 'path' key, or array with 'name' and 'contents' keys.");
-                }
-            } else {
-                throw new KiriengineException("Invalid image format at index {$index}");
+            if (file_exists($filePath)) {
+                $postFields["imagesFiles[{$index}]"] = new \CURLFile(
+                    $filePath,
+                    mime_content_type($filePath) ?: 'image/jpeg',
+                    basename($filePath)
+                );
             }
-
-            // Check if file exists
-            if (!file_exists($filePath)) {
-                if (file_exists(public_path($filePath))) {
-                    $filePath = public_path($filePath);
-                } else {
-                    throw new KiriengineException("File not found at index {$index}: {$filePath}");
-                }
-            }
-
-            $postFields["imagesFiles[{$index}]"] = new \CURLFile(
-                $filePath,
-                $mimeType,
-                $fileName
-            );
         }
 
         curl_setopt_array($curl, [
@@ -117,7 +83,6 @@ class UploadPhotoScan
                 'Authorization: Bearer ' . $this->apiKey,
             ],
             CURLOPT_TIMEOUT => 900, // 15 minutes timeout for large uploads
-            CURLOPT_CONNECTTIMEOUT => 30,
         ]);
 
         $response = curl_exec($curl);

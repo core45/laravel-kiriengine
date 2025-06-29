@@ -148,13 +148,27 @@ $result = $uploader->imageUpload($images);
 
 ## API Parameters
 
-All upload methods support the following parameters:
+Different upload methods support different parameters based on the KIRI API endpoints:
 
+### Photo Scanning Parameters:
 - `modelQuality` (0-3): High, Medium, Low, Ultra
 - `textureQuality` (0-3): 4K, 2K, 1K, 8K  
 - `isMask` (0-1): Auto Object Masking Off/On
 - `textureSmoothing` (0-1): Texture Smoothing Off/On
 - `fileFormat`: Output format (obj, fbx, stl, ply, glb, gltf, usdz, xyz)
+
+### Featureless Object Scanning Parameters:
+- `fileFormat`: Output format (obj, fbx, stl, ply, glb, gltf, usdz, xyz)
+
+### 3DGS Scanning Parameters:
+- `isMesh` (0-1): Turn off/on 3DGS to Mesh conversion
+- `isMask` (0-1): Auto Object Masking Off/On
+- `fileFormat` (string): Output format when isMesh=1 (obj, fbx, stl, ply, glb, gltf, usdz, xyz)
+
+**Note**: Each scanning algorithm has different capabilities:
+- **Photo Scan**: Full quality control with all parameters
+- **Featureless Object Scan**: Only supports file format selection
+- **3DGS Scan**: Supports mesh conversion and masking, file format only when isMesh=1
 
 ## Error Handling
 
@@ -223,3 +237,10 @@ Add the following to your `.env` file:
 KIRIENGINE_API_KEY=your_api_key_here
 KIRIENGINE_WEBHOOK_SECRET=your_webhook_secret_here
 ```
+
+### 3DGS Scanning Parameters:
+- `isMesh` (0-1): Turn off/on 3DGS to Mesh conversion
+- `isMask` (0-1): Auto Object Masking Off/On
+- `fileFormat` (string): Output format when isMesh=1 (obj, fbx, stl, ply, glb, gltf, usdz, xyz)
+
+**Note**: 3DGS scanning does not support quality parameters - these are handled automatically by the 3DGS algorithm. The `fileFormat` parameter is only used when `isMesh=1` to specify the output format for the generated mesh file.
