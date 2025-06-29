@@ -1,6 +1,6 @@
 # Laravel KiriEngine Package
 
-A Laravel package for integrating with the KIRI Engine API for 3D scanning and modeling.
+A Laravel package for integrating with the KIRI Engine API for 3D scanning and modeling. **Now with memory-efficient streaming uploads using cURL!**
 
 ## Installation
 
@@ -132,6 +132,20 @@ for ($i = 0; $i < count($allImages); $i += $batchSize) {
 }
 ```
 
+### Example: Working with Spatie Laravel Medialibrary
+
+```php
+// Get file paths from media library
+$product = Menuproduct::find(4);
+$images = [];
+
+foreach ($product->modelscans as $photo) {
+    $images[] = $photo->getPath(); // Returns full file path
+}
+
+$result = $uploader->imageUpload($images);
+```
+
 ## API Parameters
 
 All upload methods support the following parameters:
@@ -159,8 +173,18 @@ try {
 
 - Laravel 9+
 - PHP 8.1+
-- Guzzle HTTP Client
+- cURL extension (usually included with PHP)
 - At least 20 images per upload (maximum 300)
+
+## Technical Details
+
+This package uses **cURL with CURLFile** for memory-efficient file uploads:
+
+- Files are streamed directly from disk without loading into memory
+- Uses `CURLFile` class for proper multipart form data handling
+- 15-minute timeout for large uploads
+- Automatic MIME type detection
+- Support for temporary files for content arrays
 
 ## License
 
@@ -198,120 +222,4 @@ Add the following to your `.env` file:
 ```env
 KIRIENGINE_API_KEY=your_api_key_here
 KIRIENGINE_WEBHOOK_SECRET=your_webhook_secret_here
-KIRIENGINE_WEBHOOK_PATH=kiri-engine-webhook
-KIRIENGINE_STORAGE_PATH=storage/app/private/kiri-engine
-```
-
-The webhook endpoint will be available at: `https://your-domain.com/kiri-engine-webhook` (or whatever path you configure).
-
-When KIRI Engine sends a webhook, it will:
-1. Verify the webhook signature (if KIRIENGINE_WEBHOOK_SECRET is set)
-2. Store the webhook data in JSON format in your configured storage path
-3. Log the webhook receipt and any errors
-
-You can find the webhook data files in your configured storage path, named as: `{task_id}_{timestamp}.json`
-
-#### Balance
-
-```php
-use Core45\LaravelKiriengine\Facades\Kiriengine;
-
-// Get your current balance
-$balance = Kiriengine::balance()->getBalance();
-```
-
-#### Photo Scanning
-
-```php
-use Core45\LaravelKiriengine\Facades\Kiriengine;
-
-// Create a new photo scan task
-$result = Kiriengine::scanPhoto()->create([
-    'https://example.com/photo1.jpg',
-    'https://example.com/photo2.jpg'
-], [
-    // Optional parameters
-    'quality' => 'high',
-    'format' => 'glb'
-]);
-```
-
-#### Photo Scanning with Local Files
-
-If your photos are stored locally (e.g., `storage/app/photos/glass/photo1.jpg`), you can generate URLs for them using Laravel's `Storage` facade:
-
-```php
-use Illuminate\Support\Facades\Storage;
-use Core45\LaravelKiriengine\Facades\Kiriengine;
-
-$photoPaths = [
-    'photos/glass/photo1.jpg',
-    'photos/glass/photo2.jpg',
-    'photos/glass/photo3.jpg',
-];
-
-$photoUrls = array_map(fn($path) => Storage::disk('local')->url($path), $photoPaths);
-
-$result = Kiriengine::scanPhoto()->create($photoUrls);
-```
-
-> **Note:**
-> - Make sure your `local` disk is configured to be accessible (e.g., via a symbolic link with `php artisan storage:link` for the `public` disk, or by using a custom disk with a URL).
-> - If you use the `public` disk, use `Storage::disk('public')->url($path)` and store your files in `storage/app/public/photos/...`.
-
-## Usage with Spatie Laravel Medialibrary
-
-If you use [spatie/laravel-medialibrary](https://spatie.be/docs/laravel-medialibrary) and have a gallery collection, you can easily collect the URLs for KIRI Engine:
-
-```php
-use Core45\LaravelKiriengine\Facades\Kiriengine;
-
-// Assuming $model is your Eloquent model with a 'gallery' media collection
-$photoUrls = $model->getMedia('gallery')->map(fn($media) => $media->getUrl())->toArray();
-
-$result = Kiriengine::scanPhoto()->create($photoUrls);
-```
-
-#### Processing Product Photos with Spatie Laravel Medialibrary
-
-When you have a product with photos that need to be processed for 3D scanning:
-
-```php
-use Core45\LaravelKiriengine\Facades\Kiriengine;
-use App\Models\Product;
-
-// Get a product with photos
-$product = Product::first();
-
-// Using file paths for streaming uploads
-$imagePaths = [];
-foreach ($product->getMedia('photos') as $media) {
-    $imagePaths[] = [
-        'path' => $media->getPath(), // Full file path
-        'name' => $media->file_name
-    ];
-}
-
-$result = Kiriengine::uploadPhotoScan()->imageUpload(
-    images: $imagePaths,
-    modelQuality: 0, // High quality
-    textureQuality: 0, // 4K texture
-    isMask: 1, // Enable masking
-    textureSmoothing: 1, // Enable smoothing
-    fileFormat: 'glb'
-);
-
-// Using 3DGS scanning for better quality
-$result = Kiriengine::upload3DgsScan()->imageUpload(
-    images: $imagePaths,
-    isMesh: 1, // Enable 3DGS to Mesh
-    isMask: 1, // Enable auto masking
-    fileFormat: 'glb'
-);
-
-// Using object scanning for featureless objects
-$result = Kiriengine::uploadObjectScan()->imageUpload(
-    images: $imagePaths,
-    fileFormat: 'glb'
-);
 ```
