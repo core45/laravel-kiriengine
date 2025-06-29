@@ -5,6 +5,10 @@ namespace Core45\LaravelKiriengine\Kiriengine;
 use Core45\LaravelKiriengine\Exceptions\KiriengineException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
+use GuzzleHttp\Client;
+use GuzzleHttp\Psr7\MultipartStream;
+use GuzzleHttp\Psr7\Request;
+use GuzzleHttp\Psr7\Utils;
 
 class UploadPhotoScan
 {
@@ -22,9 +26,9 @@ class UploadPhotoScan
     }
 
     /**
-     * Upload images for photo scanning
+     * Upload images for photo scanning with streaming support
      *
-     * @param array $images Array of image files
+     * @param array $images Array of image files or file paths
      * @param int $modelQuality Model quality (0: High, 1: Medium, 2: Low, 3: Ultra)
      * @param int $textureQuality Texture quality (0: 4K, 1: 2K, 2: 1K, 3: 8K)
      * @param int $isMask Auto Object Masking (0: Off, 1: On)
@@ -49,35 +53,86 @@ class UploadPhotoScan
             throw new KiriengineException('Maximum 300 images are allowed for photo scanning.');
         }
 
-        $request = Http::withToken($this->apiKey);
+        $client = new Client([
+            'timeout' => 300, // 5 minutes timeout for large uploads
+            'connect_timeout' => 30,
+        ]);
 
+        $multipart = [];
+        
+        // Add form fields
+        $multipart[] = [
+            'name' => 'modelQuality',
+            'contents' => (string) $modelQuality
+        ];
+        $multipart[] = [
+            'name' => 'textureQuality',
+            'contents' => (string) $textureQuality
+        ];
+        $multipart[] = [
+            'name' => 'isMask',
+            'contents' => (string) $isMask
+        ];
+        $multipart[] = [
+            'name' => 'textureSmoothing',
+            'contents' => (string) $textureSmoothing
+        ];
+        $multipart[] = [
+            'name' => 'fileFormat',
+            'contents' => $fileFormat
+        ];
+
+        // Add files with streaming
         foreach ($images as $index => $image) {
-            if (is_string($image) && file_exists(public_path($image))) {
-                $request->attach(
-                    "imagesFiles",
-                    file_get_contents(public_path($image)),
-                    basename($image)
-                );
-            } elseif (is_array($image) && isset($image['name']) && isset($image['contents'])) {
-                $request->attach(
-                    "imagesFiles",
-                    $image['contents'],
-                    $image['name']
-                );
+            $filePath = null;
+            $fileName = null;
+
+            if (is_string($image)) {
+                // Direct file path
+                if (file_exists($image)) {
+                    $filePath = $image;
+                    $fileName = basename($image);
+                } elseif (file_exists(public_path($image))) {
+                    $filePath = public_path($image);
+                    $fileName = basename($image);
+                } else {
+                    throw new KiriengineException("File not found at index {$index}: {$image}");
+                }
+            } elseif (is_array($image)) {
+                if (isset($image['path']) && file_exists($image['path'])) {
+                    $filePath = $image['path'];
+                    $fileName = $image['name'] ?? basename($image['path']);
+                } else {
+                    throw new KiriengineException("Invalid image format at index {$index}");
+                }
             } else {
                 throw new KiriengineException("Invalid image format at index {$index}");
             }
+
+            // Add file with streaming
+            if ($filePath && $fileName) {
+                $multipart[] = [
+                    'name' => 'imagesFiles',
+                    'contents' => Utils::streamFor(fopen($filePath, 'r')),
+                    'filename' => $fileName
+                ];
+            }
         }
 
-        $response = $request->post("{$this->baseUrl}/api/v1/open/photo/image", [
-            'modelQuality' => $modelQuality,
-            'textureQuality' => $textureQuality,
-            'isMask' => $isMask,
-            'textureSmoothing' => $textureSmoothing,
-            'fileFormat' => $fileFormat,
+        $request = new Request(
+            'POST',
+            "{$this->baseUrl}/api/v1/open/photo/image",
+            [
+                'Authorization' => "Bearer {$this->apiKey}",
+                'Content-Type' => 'multipart/form-data',
+            ]
+        );
+
+        $response = $client->send($request, [
+            'multipart' => $multipart
         ]);
 
-        return $this->handleResponse($response);
+        return $this->handleGuzzleResponse($response);
     }
 
     /**
@@ -139,6 +194,32 @@ class UploadPhotoScan
         }
 
         $data = $response->json();
+
+        if (!$data['ok']) {
+            throw new KiriengineException(
+                "API error: {$data['msg']} (Code: {$data['code']})"
+            );
+        }
+
+        return $data['data'];
+    }
+
+    /**
+     * Handle Guzzle response and throw exceptions if necessary
+     *
+     * @param \Psr\Http\Message\ResponseInterface $response
+     * @return array
+     * @throws KiriengineException
+     */
+    protected function handleGuzzleResponse($response): array
+    {
+        if ($response->getStatusCode() >= 400) {
+            throw new KiriengineException(
+                "API request failed: {$response->getStatusCode()} - {$response->getBody()}"
+            );
+        }
+
+        $data = json_decode($response->getBody()->getContents(), true);
 
         if (!$data['ok']) {
             throw new KiriengineException(

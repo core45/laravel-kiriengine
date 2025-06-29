@@ -1,6 +1,6 @@
 # Laravel KiriEngine
 
-A Laravel package for interacting with the KiriEngine API.
+A Laravel package for interacting with the KIRI Engine API with optimized streaming uploads for large files.
 
 ## Installation
 
@@ -33,7 +33,7 @@ use Core45\LaravelKiriengine\Kiriengine\UploadPhotoScan;
 
 $uploader = new UploadPhotoScan();
 
-// Upload images
+// Upload images with streaming support
 $result = $uploader->imageUpload(
     images: $images,
     modelQuality: 0, // 0: High, 1: Medium, 2: Low, 3: Ultra
@@ -61,7 +61,7 @@ use Core45\LaravelKiriengine\Kiriengine\UploadObjectScan;
 
 $uploader = new UploadObjectScan();
 
-// Upload images
+// Upload images with streaming support
 $result = $uploader->imageUpload(
     images: $images,
     fileFormat: 'obj' // obj, fbx, stl, ply, glb, gltf, usdz, xyz
@@ -81,7 +81,7 @@ use Core45\LaravelKiriengine\Kiriengine\Upload3DgsScan;
 
 $uploader = new Upload3DgsScan();
 
-// Upload images
+// Upload images with streaming support
 $result = $uploader->imageUpload(
     images: $images,
     isMesh: 0, // 0: Turn off 3DGS to Mesh, 1: Turn on 3DGS to Mesh
@@ -95,6 +95,48 @@ $result = $uploader->videoUpload(
     isMesh: 0,
     isMask: 0,
     fileFormat: 'obj'
+);
+```
+
+## Streaming Upload for Large Files
+
+The package uses streaming uploads by default to handle large files efficiently without loading them all into memory.
+
+### Using File Paths (Recommended)
+
+```php
+use Core45\LaravelKiriengine\Facades\Kiriengine;
+
+// Prepare file paths instead of loading contents into memory
+$imagePaths = [];
+foreach ($modelScans as $media) {
+    $relativePath = $media->id . '/' . $media->file_name;
+    $fullPath = storage_path('app/public/' . $relativePath);
+    
+    $imagePaths[] = [
+        'path' => $fullPath,
+        'name' => $media->name
+    ];
+}
+
+// Upload with streaming (prevents memory issues with large files)
+$result = Kiriengine::uploadPhotoScan()->imageUpload(
+    images: $imagePaths
+);
+```
+
+### Alternative: Direct File Paths
+
+```php
+// Pass file paths directly as strings
+$imagePaths = [
+    '/path/to/image1.jpg',
+    '/path/to/image2.jpg',
+    '/path/to/image3.jpg'
+];
+
+$result = Kiriengine::uploadPhotoScan()->imageUpload(
+    images: $imagePaths
 );
 ```
 
@@ -125,6 +167,7 @@ The package uses `KiriengineException` for error handling. All methods will thro
 - The video resolution exceeds 1920x1080
 - The API request fails
 - The API returns an error response
+- Files are not found when using file paths
 
 ## License
 
@@ -223,7 +266,7 @@ $result = Kiriengine::scanPhoto()->create($photoUrls);
 > - Make sure your `local` disk is configured to be accessible (e.g., via a symbolic link with `php artisan storage:link` for the `public` disk, or by using a custom disk with a URL).
 > - If you use the `public` disk, use `Storage::disk('public')->url($path)` and store your files in `storage/app/public/photos/...`.
 
-#### Photo Scanning with Spatie Laravel Medialibrary
+## Usage with Spatie Laravel Medialibrary
 
 If you use [spatie/laravel-medialibrary](https://spatie.be/docs/laravel-medialibrary) and have a gallery collection, you can easily collect the URLs for KIRI Engine:
 
@@ -234,4 +277,48 @@ use Core45\LaravelKiriengine\Facades\Kiriengine;
 $photoUrls = $model->getMedia('gallery')->map(fn($media) => $media->getUrl())->toArray();
 
 $result = Kiriengine::scanPhoto()->create($photoUrls);
+```
+
+#### Processing Product Photos with Spatie Laravel Medialibrary
+
+When you have a product with photos that need to be processed for 3D scanning:
+
+```php
+use Core45\LaravelKiriengine\Facades\Kiriengine;
+use App\Models\Product;
+
+// Get a product with photos
+$product = Product::first();
+
+// Using file paths for streaming uploads
+$imagePaths = [];
+foreach ($product->getMedia('photos') as $media) {
+    $imagePaths[] = [
+        'path' => $media->getPath(), // Full file path
+        'name' => $media->file_name
+    ];
+}
+
+$result = Kiriengine::uploadPhotoScan()->imageUpload(
+    images: $imagePaths,
+    modelQuality: 0, // High quality
+    textureQuality: 0, // 4K texture
+    isMask: 1, // Enable masking
+    textureSmoothing: 1, // Enable smoothing
+    fileFormat: 'glb'
+);
+
+// Using 3DGS scanning for better quality
+$result = Kiriengine::upload3DgsScan()->imageUpload(
+    images: $imagePaths,
+    isMesh: 1, // Enable 3DGS to Mesh
+    isMask: 1, // Enable auto masking
+    fileFormat: 'glb'
+);
+
+// Using object scanning for featureless objects
+$result = Kiriengine::uploadObjectScan()->imageUpload(
+    images: $imagePaths,
+    fileFormat: 'glb'
+);
 ```

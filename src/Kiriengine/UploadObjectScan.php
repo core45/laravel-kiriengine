@@ -5,6 +5,10 @@ namespace Core45\LaravelKiriengine\Kiriengine;
 use Core45\LaravelKiriengine\Exceptions\KiriengineException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
+use GuzzleHttp\Client;
+use GuzzleHttp\Psr7\MultipartStream;
+use GuzzleHttp\Psr7\Request;
+use GuzzleHttp\Psr7\Utils;
 
 class UploadObjectScan
 {
@@ -22,9 +26,9 @@ class UploadObjectScan
     }
 
     /**
-     * Upload images for object scanning
+     * Upload images for object scanning with streaming support
      *
-     * @param array $images Array of image files
+     * @param array $images Array of image files or file paths
      * @param string $fileFormat Output format (obj, fbx, stl, ply, glb, gltf, usdz, xyz)
      * @return array
      * @throws KiriengineException
@@ -39,31 +43,70 @@ class UploadObjectScan
             throw new KiriengineException('Maximum 300 images are allowed for object scanning.');
         }
 
-        $request = Http::withToken($this->apiKey);
+        $client = new Client([
+            'timeout' => 300, // 5 minutes timeout for large uploads
+            'connect_timeout' => 30,
+        ]);
 
+        $multipart = [];
+        
+        // Add form fields
+        $multipart[] = [
+            'name' => 'fileFormat',
+            'contents' => $fileFormat
+        ];
+
+        // Add files with streaming
         foreach ($images as $index => $image) {
-            if (is_string($image) && file_exists(public_path($image))) {
-                $request->attach(
-                    "imagesFiles",
-                    file_get_contents(public_path($image)),
-                    basename($image)
-                );
-            } elseif (is_array($image) && isset($image['name']) && isset($image['contents'])) {
-                $request->attach(
-                    "imagesFiles",
-                    $image['contents'],
-                    $image['name']
-                );
+            $filePath = null;
+            $fileName = null;
+
+            if (is_string($image)) {
+                // Direct file path
+                if (file_exists($image)) {
+                    $filePath = $image;
+                    $fileName = basename($image);
+                } elseif (file_exists(public_path($image))) {
+                    $filePath = public_path($image);
+                    $fileName = basename($image);
+                } else {
+                    throw new KiriengineException("File not found at index {$index}: {$image}");
+                }
+            } elseif (is_array($image)) {
+                if (isset($image['path']) && file_exists($image['path'])) {
+                    $filePath = $image['path'];
+                    $fileName = $image['name'] ?? basename($image['path']);
+                } else {
+                    throw new KiriengineException("Invalid image format at index {$index}");
+                }
             } else {
                 throw new KiriengineException("Invalid image format at index {$index}");
             }
+
+            // Add file with streaming
+            if ($filePath && $fileName) {
+                $multipart[] = [
+                    'name' => 'imagesFiles',
+                    'contents' => Utils::streamFor(fopen($filePath, 'r')),
+                    'filename' => $fileName
+                ];
+            }
         }
 
-        $response = $request->post("{$this->baseUrl}/api/v1/open/featureless/image", [
-            'fileFormat' => $fileFormat,
+        $request = new Request(
+            'POST',
+            "{$this->baseUrl}/api/v1/open/featureless/image",
+            [
+                'Authorization' => "Bearer {$this->apiKey}",
+                'Content-Type' => 'multipart/form-data',
+            ]
+        );
+
+        $response = $client->send($request, [
+            'multipart' => $multipart
         ]);
 
-        return $this->handleResponse($response);
+        return $this->handleGuzzleResponse($response);
     }
 
     /**
@@ -111,6 +154,32 @@ class UploadObjectScan
         }
 
         $data = $response->json();
+
+        if (!$data['ok']) {
+            throw new KiriengineException(
+                "API error: {$data['msg']} (Code: {$data['code']})"
+            );
+        }
+
+        return $data['data'];
+    }
+
+    /**
+     * Handle Guzzle response and throw exceptions if necessary
+     *
+     * @param \Psr\Http\Message\ResponseInterface $response
+     * @return array
+     * @throws KiriengineException
+     */
+    protected function handleGuzzleResponse($response): array
+    {
+        if ($response->getStatusCode() >= 400) {
+            throw new KiriengineException(
+                "API request failed: {$response->getStatusCode()} - {$response->getBody()}"
+            );
+        }
+
+        $data = json_decode($response->getBody()->getContents(), true);
 
         if (!$data['ok']) {
             throw new KiriengineException(
