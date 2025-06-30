@@ -3,8 +3,6 @@
 namespace Core45\LaravelKiriengine\Kiriengine;
 
 use Core45\LaravelKiriengine\Exceptions\KiriengineException;
-use Illuminate\Http\Client\Response;
-use Illuminate\Support\Facades\Http;
 
 class UploadObjectScan
 {
@@ -29,7 +27,7 @@ class UploadObjectScan
      * @return array
      * @throws KiriengineException
      */
-    public function objectUpload(
+    public function imageUpload(
         array $images,
         string $fileFormat = 'obj'
     ): array {
@@ -41,20 +39,17 @@ class UploadObjectScan
             throw new KiriengineException('Maximum 300 images are allowed for object scanning.');
         }
 
-        // Prepare cURL
         $curl = curl_init();
 
-        // Build form data - only fileFormat is supported by Featureless Object Scan API
-        $postFields = [
-            'fileFormat' => $fileFormat
+        $parameters = [
+            'fileFormat' => strtoupper($fileFormat) // API expects uppercase format
         ];
 
-        // Add files using CURLFile (streams directly without loading into memory)
         foreach ($images as $index => $image) {
             $filePath = $image;
 
             if (file_exists($filePath)) {
-                $postFields["imagesFiles[{$index}]"] = new \CURLFile(
+                $parameters["imagesFiles[{$index}]"] = new \CURLFile(
                     $filePath,
                     mime_content_type($filePath) ?: 'image/jpeg',
                     basename($filePath)
@@ -66,7 +61,7 @@ class UploadObjectScan
             CURLOPT_URL => "{$this->baseUrl}/api/v1/open/featureless/image",
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => $postFields,
+            CURLOPT_POSTFIELDS => $parameters,
             CURLOPT_HTTPHEADER => [
                 'Authorization: Bearer ' . $this->apiKey,
             ],
@@ -87,7 +82,18 @@ class UploadObjectScan
             throw new KiriengineException("HTTP error {$httpCode}: {$response}");
         }
 
-        return json_decode($response, true) ?: [];
+        $data = json_decode($response, true);
+        
+        // Handle response according to official API documentation
+        if (!$data || !isset($data['ok'])) {
+            throw new KiriengineException("Invalid response from KIRI Engine API: {$response}");
+        }
+
+        if (!$data['ok']) {
+            throw new KiriengineException("KIRI Engine API error: {$data['msg']} (Code: {$data['code']})");
+        }
+
+        return $data['data'] ?? [];
     }
 
     /**
@@ -113,9 +119,9 @@ class UploadObjectScan
         // Prepare cURL
         $curl = curl_init();
 
-        // Build form data
-        $postFields = [
-            'fileFormat' => $fileFormat,
+        // Build parameters
+        $parameters = [
+            'fileFormat' => strtoupper($fileFormat), // API expects uppercase format
             'videoFile' => new \CURLFile(
                 $videoPath,
                 mime_content_type($videoPath) ?: 'video/mp4',
@@ -127,7 +133,7 @@ class UploadObjectScan
             CURLOPT_URL => "{$this->baseUrl}/api/v1/open/featureless/video",
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => $postFields,
+            CURLOPT_POSTFIELDS => $parameters,
             CURLOPT_HTTPHEADER => [
                 'Authorization: Bearer ' . $this->apiKey,
             ],
@@ -149,31 +155,17 @@ class UploadObjectScan
             throw new KiriengineException("HTTP error {$httpCode}: {$response}");
         }
 
-        return json_decode($response, true) ?: [];
-    }
-
-    /**
-     * Handle API response and throw exceptions if necessary
-     *
-     * @param Response $response
-     * @return array
-     * @throws KiriengineException
-     */
-    protected function handleResponse(Response $response): array
-    {
-        if ($response->failed()) {
-            throw new KiriengineException(
-                'KIRI Engine API request failed: ' . $response->body(),
-                $response->status()
-            );
+        $data = json_decode($response, true);
+        
+        // Handle response according to official API documentation
+        if (!$data || !isset($data['ok'])) {
+            throw new KiriengineException("Invalid response from KIRI Engine API: {$response}");
         }
 
-        $data = $response->json();
-
-        if (isset($data['error'])) {
-            throw new KiriengineException('KIRI Engine API error: ' . $data['error']);
+        if (!$data['ok']) {
+            throw new KiriengineException("KIRI Engine API error: {$data['msg']} (Code: {$data['code']})");
         }
 
-        return $data;
+        return $data['data'] ?? [];
     }
 }

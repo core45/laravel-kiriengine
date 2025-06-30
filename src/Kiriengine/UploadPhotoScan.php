@@ -3,8 +3,6 @@
 namespace Core45\LaravelKiriengine\Kiriengine;
 
 use Core45\LaravelKiriengine\Exceptions\KiriengineException;
-use Illuminate\Http\Client\Response;
-use Illuminate\Support\Facades\Http;
 
 class UploadPhotoScan
 {
@@ -23,6 +21,7 @@ class UploadPhotoScan
 
     /**
      * Upload images for photo scanning with streaming support using cURL
+     * Based on official KIRI Engine API documentation: https://docs.kiriengine.app/photo-scan/image-upload
      *
      * @param array $images Array of image files or file paths
      * @param int $modelQuality Model quality (0: High, 1: Medium, 2: Low, 3: Ultra)
@@ -49,24 +48,21 @@ class UploadPhotoScan
             throw new KiriengineException('Maximum 300 images are allowed for photo scanning.');
         }
 
-        // Prepare cURL
         $curl = curl_init();
 
-        // Build form data
-        $postFields = [
+        $parameters = [
             'modelQuality' => (string) $modelQuality,
             'textureQuality' => (string) $textureQuality,
             'isMask' => (string) $isMask,
             'textureSmoothing' => (string) $textureSmoothing,
-            'fileFormat' => $fileFormat
+            'fileFormat' => strtoupper($fileFormat)
         ];
 
-        // Add files using CURLFile (streams directly without loading into memory)
         foreach ($images as $index => $image) {
             $filePath = $image;
 
             if (file_exists($filePath)) {
-                $postFields["imagesFiles[{$index}]"] = new \CURLFile(
+                $parameters["imagesFiles[{$index}]"] = new \CURLFile(
                     $filePath,
                     mime_content_type($filePath) ?: 'image/jpeg',
                     basename($filePath)
@@ -78,7 +74,7 @@ class UploadPhotoScan
             CURLOPT_URL => "{$this->baseUrl}/api/v1/open/photo/image",
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => $postFields,
+            CURLOPT_POSTFIELDS => $parameters,
             CURLOPT_HTTPHEADER => [
                 'Authorization: Bearer ' . $this->apiKey,
             ],
@@ -99,11 +95,22 @@ class UploadPhotoScan
             throw new KiriengineException("HTTP error {$httpCode}: {$response}");
         }
 
-        return json_decode($response, true) ?: [];
+        $data = json_decode($response, true);
+        
+        if (!$data || !isset($data['ok'])) {
+            throw new KiriengineException("Invalid response from KIRI Engine API: {$response}");
+        }
+
+        if (!$data['ok']) {
+            throw new KiriengineException("KIRI Engine API error: {$data['msg']} (Code: {$data['code']})");
+        }
+
+        return $data['data'] ?? [];
     }
 
     /**
      * Upload video for photo scanning
+     * Based on official KIRI Engine API documentation: https://docs.kiriengine.app/photo-scan/video-upload
      *
      * @param string $videoPath Path to video file
      * @param int $modelQuality Model quality (0: High, 1: Medium, 2: Low, 3: Ultra)
@@ -126,22 +133,19 @@ class UploadPhotoScan
             throw new KiriengineException('Video file not found.');
         }
 
-        // Check video resolution and duration
         $videoInfo = getimagesize($videoPath);
         if ($videoInfo[0] > 1920 || $videoInfo[1] > 1080) {
             throw new KiriengineException('Video resolution must not exceed 1920x1080.');
         }
 
-        // Prepare cURL
         $curl = curl_init();
 
-        // Build form data
-        $postFields = [
+        $parameters = [
             'modelQuality' => (string) $modelQuality,
             'textureQuality' => (string) $textureQuality,
             'isMask' => (string) $isMask,
             'textureSmoothing' => (string) $textureSmoothing,
-            'fileFormat' => $fileFormat,
+            'fileFormat' => strtoupper($fileFormat), // API expects uppercase format
             'videoFile' => new \CURLFile(
                 $videoPath,
                 mime_content_type($videoPath) ?: 'video/mp4',
@@ -153,7 +157,7 @@ class UploadPhotoScan
             CURLOPT_URL => "{$this->baseUrl}/api/v1/open/photo/video",
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => $postFields,
+            CURLOPT_POSTFIELDS => $parameters,
             CURLOPT_HTTPHEADER => [
                 'Authorization: Bearer ' . $this->apiKey,
             ],
@@ -175,31 +179,16 @@ class UploadPhotoScan
             throw new KiriengineException("HTTP error {$httpCode}: {$response}");
         }
 
-        return json_decode($response, true) ?: [];
-    }
-
-    /**
-     * Handle API response and throw exceptions if necessary
-     *
-     * @param Response $response
-     * @return array
-     * @throws KiriengineException
-     */
-    protected function handleResponse(Response $response): array
-    {
-        if ($response->failed()) {
-            throw new KiriengineException(
-                'KIRI Engine API request failed: ' . $response->body(),
-                $response->status()
-            );
+        $data = json_decode($response, true);
+        
+        if (!$data || !isset($data['ok'])) {
+            throw new KiriengineException("Invalid response from KIRI Engine API: {$response}");
         }
 
-        $data = $response->json();
-
-        if (isset($data['error'])) {
-            throw new KiriengineException('KIRI Engine API error: ' . $data['error']);
+        if (!$data['ok']) {
+            throw new KiriengineException("KIRI Engine API error: {$data['msg']} (Code: {$data['code']})");
         }
 
-        return $data;
+        return $data['data'] ?? [];
     }
 }
