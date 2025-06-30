@@ -20,6 +20,8 @@ Add your KIRI Engine API key to your `.env` file:
 
 ```env
 KIRIENGINE_API_KEY=your_api_key_here
+KIRIENGINE_WEBHOOK_SECRET=your_webhook_secret_here
+KIRIENGINE_WEBHOOK_PATH=kiri-engine-webhook
 ```
 
 ## Usage
@@ -73,6 +75,27 @@ $images = [
 ];
 
 $result = $uploader->imageUpload($images);
+```
+
+### Model Status and Download
+
+```php
+use Core45\LaravelKiriengine\Facades\Kiriengine;
+
+// Get model status
+$status = Kiriengine::model3d()->getStatus('your_serial_number');
+
+// Get download link for completed model
+$downloadInfo = Kiriengine::model3d()->getDownloadLink('your_serial_number');
+```
+
+### Balance Check
+
+```php
+use Core45\LaravelKiriengine\Facades\Kiriengine;
+
+// Check your KIRI Engine balance
+$balance = Kiriengine::balance()->getBalance();
 ```
 
 ## File Upload Methods
@@ -170,6 +193,53 @@ Different upload methods support different parameters based on the KIRI API endp
 - **Featureless Object Scan**: Only supports file format selection
 - **3DGS Scan**: Supports mesh conversion and masking, file format only when isMesh=1
 
+## Webhooks
+
+The package includes webhook support for receiving model processing updates. When a model is completed, KIRI Engine will send a webhook to your application.
+
+### Setup Webhook Routes
+
+The webhook route is automatically registered at `/kiri-engine-webhook` (configurable via `KIRIENGINE_WEBHOOK_PATH`).
+
+### Webhook Event Handling
+
+The package dispatches a `KiriWebhookReceived` event when a webhook is received. You can listen to this event to process completed models:
+
+```php
+// In your EventServiceProvider
+protected $listen = [
+    \Core45\LaravelKiriengine\Events\KiriWebhookReceived::class => [
+        \Core45\LaravelKiriengine\Listeners\ProcessKiriWebhook::class,
+    ],
+];
+```
+
+### Custom Webhook Processing
+
+The included `ProcessKiriWebhook` listener automatically:
+- Downloads completed models
+- Extracts ZIP files
+- Saves files to storage
+- Handles errors and retries
+
+You can create your own listener to customize the processing:
+
+```php
+class CustomWebhookListener
+{
+    public function handle(KiriWebhookReceived $event)
+    {
+        $payload = $event->payload;
+        
+        // Process the webhook data
+        if (isset($payload['id'])) {
+            $modelId = $payload['id'];
+            // Your custom logic here
+        }
+    }
+}
+```
+
 ## Error Handling
 
 The package throws `KiriengineException` for API errors:
@@ -200,27 +270,22 @@ This package uses **cURL with CURLFile** for memory-efficient file uploads:
 - Automatic MIME type detection
 - Support for temporary files for content arrays
 
-## License
-
-This package is open-sourced software licensed under the [MIT license](LICENSE).
-
-## Usage
+## Available Methods
 
 Kiriengine API is divided into six main parts:
 - Photo Scan Upload
 - Featureless Object Scan Upload
 - 3DGS Scan Upload
-- Model Status and Download
+- Model Status and Get Download Link
 - Balance
 - Webhook
 
-To access any of the methods use `Kiriengine` facade and use one of the main shortcut methods followed by the API method name.
-- Kiriengine::scanPhoto()->...
-- Kiriengine::uploadObjectScan()->...
-- Kiriengine::Upload3DgsScan()->...
-- Kiriengine::model3d()->...
-- Kiriengine::balance()->...
-
+To access any of the methods use `Kiriengine` facade and use one of the main shortcut methods followed by the API method name:
+- `Kiriengine::uploadPhotoScan()->...`
+- `Kiriengine::uploadObjectScan()->...`
+- `Kiriengine::upload3DgsScan()->...`
+- `Kiriengine::model3d()->...`
+- `Kiriengine::balance()->...`
 
 ### All of the available methods you can find in Kiriengine API docs:
 
@@ -228,19 +293,6 @@ https://docs.kiriengine.app
 
 If you find any errors or would like to help with improving and maintaining the package please leave the comment.
 
+## License
 
-### Usage
-
-Add the following to your `.env` file:
-
-```env
-KIRIENGINE_API_KEY=your_api_key_here
-KIRIENGINE_WEBHOOK_SECRET=your_webhook_secret_here
-```
-
-### 3DGS Scanning Parameters:
-- `isMesh` (0-1): Turn off/on 3DGS to Mesh conversion
-- `isMask` (0-1): Auto Object Masking Off/On
-- `fileFormat` (string): Output format when isMesh=1 (obj, fbx, stl, ply, glb, gltf, usdz, xyz)
-
-**Note**: 3DGS scanning does not support quality parameters - these are handled automatically by the 3DGS algorithm. The `fileFormat` parameter is only used when `isMesh=1` to specify the output format for the generated mesh file.
+This package is open-sourced software licensed under the [MIT license](LICENSE).

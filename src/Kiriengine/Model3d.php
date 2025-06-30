@@ -24,13 +24,13 @@ class Model3d extends LaravelKiriengine
     }
 
     /**
-     * Download a 3D model (zipped)
+     * Get download link for a 3D model (zipped)
      *
      * @param string $serialize The serial number of the model
      * @return array
      * @throws KiriengineException
      */
-    public function download(string $serialize): array
+    public function getDownloadLink(string $serialize): array
     {
         $response = $this->makeRequest([
             'serialize' => $serialize

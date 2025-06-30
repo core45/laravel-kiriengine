@@ -3,6 +3,7 @@
 namespace Core45\LaravelKiriengine\Listeners;
 
 use Core45\LaravelKiriengine\Events\KiriWebhookReceived;
+use Core45\LaravelKiriengine\Facades\Kiriengine;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Http;
@@ -61,7 +62,7 @@ class ProcessKiriWebhook implements ShouldQueue
             Log::info('Starting model download', ['model_id' => $id]);
 
             // Get download information from KIRI Engine
-            $result = \Kiriengine::model3d()->download($id);
+            $result = Kiriengine::model3d()->getDownloadLink($id);
 
             if (!isset($result['modelUrl']) || !isset($result['serialize'])) {
                 Log::error('Invalid response from KIRI API', [
