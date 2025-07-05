@@ -117,6 +117,114 @@ You can create more complex resolvers for different scenarios:
 - Consider encrypting API keys in the database for additional security
 - Use proper authentication middleware to ensure only authorized users can access the API
 
+## Using in Jobs and Commands
+
+When using KIRI Engine in jobs, commands, or other contexts where authentication isn't available, you can explicitly set the API key.
+
+### Using the Trait (Recommended)
+
+1. **Add the trait to your job or command:**
+
+```php
+use Core45\LaravelKiriengine\Traits\WithKiriEngineApiKey;
+
+class ProcessKiriUploadJob implements ShouldQueue
+{
+    use WithKiriEngineApiKey;
+
+    public function __construct(
+        private int $userId,
+        private array $images
+    ) {}
+
+    public function handle()
+    {
+        // Set API key from user ID
+        $this->withUserIdKiriEngineApiKey($this->userId);
+
+        // Now use KIRI Engine - it will use the user's API key
+        $uploader = new UploadPhotoScan();
+        $result = $uploader->imageUpload($this->images);
+
+        // Clear the API key when done
+        $this->clearKiriEngineApiKey();
+    }
+}
+```
+
+2. **Alternative ways to set the API key:**
+
+```php
+// Set directly with API key string
+$this->withKiriEngineApiKey('user_specific_api_key_here');
+
+// Set from user model
+$user = User::find($userId);
+$this->withUserKiriEngineApiKey($user);
+
+// Set from user ID (automatically fetches user)
+$this->withUserIdKiriEngineApiKey($userId);
+```
+
+### Manual API Key Setting
+
+You can also set the API key manually without using the trait:
+
+```php
+use Core45\LaravelKiriengine\Services\KiriEngineApiKeyResolver;
+
+class ProcessKiriUploadJob implements ShouldQueue
+{
+    public function handle()
+    {
+        // Set the API key explicitly
+        KiriEngineApiKeyResolver::setApiKey('user_specific_api_key_here');
+
+        // Use KIRI Engine
+        $uploader = new UploadPhotoScan();
+        $result = $uploader->imageUpload($this->images);
+
+        // Clear when done
+        KiriEngineApiKeyResolver::clearApiKey();
+    }
+}
+```
+
+### Command Example
+
+```php
+use Core45\LaravelKiriengine\Traits\WithKiriEngineApiKey;
+
+class ProcessUserUploadsCommand extends Command
+{
+    use WithKiriEngineApiKey;
+
+    protected $signature = 'kiri:process-uploads {userId}';
+
+    public function handle()
+    {
+        $userId = $this->argument('userId');
+        
+        // Set API key for this user
+        $this->withUserIdKiriEngineApiKey($userId);
+
+        // Process uploads
+        $uploader = new UploadPhotoScan();
+        // ... your logic here
+
+        $this->clearKiriEngineApiKey();
+    }
+}
+```
+
+### API Key Resolution Priority
+
+The package resolves API keys in this order:
+
+1. **Explicitly set API key** (highest priority - for jobs, commands, etc.)
+2. **Custom resolver function** (from config)
+3. **Environment variable** (fallback)
+
 ## Usage
 
 ### Photo Scanning
