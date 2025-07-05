@@ -7,6 +7,7 @@ use Core45\LaravelKiriengine\Kiriengine\Model3d;
 use Core45\LaravelKiriengine\Kiriengine\Upload3DgsScan;
 use Core45\LaravelKiriengine\Kiriengine\UploadObjectScan;
 use Core45\LaravelKiriengine\Kiriengine\UploadPhotoScan;
+use Core45\LaravelKiriengine\Services\KiriEngineApiKeyResolver;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Config;
@@ -26,15 +27,16 @@ class KiriengineServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->mergeConfigFrom(__DIR__ . '/../config/laravel-kiriengine.php', 'kiriengine');
+        $this->mergeConfigFrom(__DIR__ . '/../config/laravel-kiriengine.php', 'laravel-kiriengine');
+
+        // Register the API key resolver service
+        $this->app->singleton(KiriEngineApiKeyResolver::class, function ($app) {
+            return new KiriEngineApiKeyResolver();
+        });
 
         // Register the service the package provides.
         $this->app->singleton('kiriengine', function ($app) {
-            return new Kiriengine(
-                Config::get('kiriengine.api_key'),
-                Config::get('kiriengine.api_url'),
-                Config::get('kiriengine.api_version')
-            );
+            return new Kiriengine();
         });
 
         $this->app->singleton('kiriengine.balance', function ($app) {

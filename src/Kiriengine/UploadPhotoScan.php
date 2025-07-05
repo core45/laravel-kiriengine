@@ -3,6 +3,7 @@
 namespace Core45\LaravelKiriengine\Kiriengine;
 
 use Core45\LaravelKiriengine\Exceptions\KiriengineException;
+use Core45\LaravelKiriengine\Services\KiriEngineApiKeyResolver;
 
 class UploadPhotoScan
 {
@@ -11,12 +12,11 @@ class UploadPhotoScan
 
     public function __construct()
     {
-        $this->baseUrl = config('kiriengine.api_url', 'https://api.kiriengine.app');
-        $this->apiKey = config('kiriengine.api_key');
-
-        if (empty($this->apiKey)) {
-            throw new KiriengineException('KIRIENGINE_API_KEY is not set in your .env file.');
-        }
+        $this->baseUrl = config('laravel-kiriengine.base_url', 'https://api.kiriengine.app/api/v1/open/');
+        
+        // Use the API key resolver service
+        $apiKeyResolver = app(KiriEngineApiKeyResolver::class);
+        $this->apiKey = $apiKeyResolver->getApiKey();
     }
 
     /**
@@ -71,7 +71,7 @@ class UploadPhotoScan
         }
 
         curl_setopt_array($curl, [
-            CURLOPT_URL => "{$this->baseUrl}/api/v1/open/photo/image",
+            CURLOPT_URL => "{$this->baseUrl}/photo/image",
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POST => true,
             CURLOPT_POSTFIELDS => $parameters,
@@ -154,7 +154,7 @@ class UploadPhotoScan
         ];
 
         curl_setopt_array($curl, [
-            CURLOPT_URL => "{$this->baseUrl}/api/v1/open/photo/video",
+            CURLOPT_URL => "{$this->baseUrl}/photo/video",
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POST => true,
             CURLOPT_POSTFIELDS => $parameters,

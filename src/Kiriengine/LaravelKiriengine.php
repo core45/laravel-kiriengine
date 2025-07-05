@@ -5,6 +5,7 @@ namespace Core45\LaravelKiriengine\Kiriengine;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
+use Core45\LaravelKiriengine\Services\KiriEngineApiKeyResolver;
 
 abstract class LaravelKiriengine
 {
@@ -16,11 +17,10 @@ abstract class LaravelKiriengine
     public function __construct()
     {
         $this->baseUrl = Config::get('laravel-kiriengine.base_url', 'https://api.kiriengine.app/api/v1/open/');
-        $this->apiKey = Config::get('laravel-kiriengine.api_key', '');
-
-        if (empty($this->apiKey)) {
-            throw new \Exception('KIRI Engine API key is not set. Please set KIRIENGINE_API_KEY in your .env file.');
-        }
+        
+        // Use the API key resolver service
+        $apiKeyResolver = app(KiriEngineApiKeyResolver::class);
+        $this->apiKey = $apiKeyResolver->getApiKey();
 
         $this->debug = Config::get('laravel-kiriengine.debug', false);
         $this->verify = Config::get('laravel-kiriengine.verify', true);

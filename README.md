@@ -1,6 +1,6 @@
 # Laravel KiriEngine Package
 
-A Laravel package for integrating with the KIRI Engine API for 3D scanning and modeling. **Now with memory-efficient streaming uploads using cURL!**
+A Laravel package for integrating with the KIRI Engine API for 3D scanning and modeling. **Now with memory-efficient streaming uploads using cURL and multi-tenant support!**
 
 ## Installation
 
@@ -23,6 +23,99 @@ KIRIENGINE_API_KEY=your_api_key_here
 KIRIENGINE_WEBHOOK_SECRET=your_webhook_secret_here
 KIRIENGINE_WEBHOOK_PATH=kiri-engine-webhook
 ```
+
+## Multi-Tenant Support
+
+The package now supports multi-tenant applications where each user has their own KIRI Engine API key. You can easily configure the package to retrieve API keys from the authenticated user or any other source.
+
+### Basic Multi-Tenant Setup
+
+1. **Add the API key column to your users table:**
+
+```bash
+php artisan make:migration add_kiri_api_key_to_users_table
+```
+
+```php
+// In the migration file
+Schema::table('users', function (Blueprint $table) {
+    $table->string('kiri_api_key')->nullable()->after('password');
+});
+```
+
+2. **Update your User model:**
+
+```php
+// In app/Models/User.php
+protected $fillable = [
+    'name',
+    'email',
+    'password',
+    'kiri_api_key',
+];
+
+protected $hidden = [
+    'password',
+    'remember_token',
+    'kiri_api_key', // Hide from serialization
+];
+```
+
+3. **Configure the API key resolver in your config:**
+
+```php
+// In config/laravel-kiriengine.php
+'api_key_resolver' => function() {
+    return auth()->user()->kiri_api_key ?? null;
+},
+```
+
+### Advanced Multi-Tenant Configuration
+
+You can create more complex resolvers for different scenarios:
+
+```php
+// Example: Check multiple sources
+'api_key_resolver' => function() {
+    // First try user-specific key
+    if (auth()->check() && auth()->user()->kiri_api_key) {
+        return auth()->user()->kiri_api_key;
+    }
+    
+    // Then try organization key
+    if (auth()->check() && auth()->user()->organization) {
+        return auth()->user()->organization->kiri_api_key;
+    }
+    
+    // Finally fall back to global key
+    return null;
+},
+
+// Example: Database-based resolver
+'api_key_resolver' => function() {
+    return \App\Models\SystemSetting::where('key', 'kiri_api_key')
+        ->where('user_id', auth()->id())
+        ->value('value');
+},
+
+// Example: Cache-based resolver
+'api_key_resolver' => function() {
+    return cache()->remember("user_{auth()->id()}_kiri_key", 3600, function() {
+        return auth()->user()->kiri_api_key;
+    });
+},
+```
+
+### Fallback Behavior
+
+- If the resolver returns `null` or an empty string, the package will fall back to the `KIRIENGINE_API_KEY` environment variable
+- If neither source provides a valid API key, an exception will be thrown with a clear error message
+
+### Security Considerations
+
+- API keys are automatically hidden from model serialization when added to the `$hidden` array
+- Consider encrypting API keys in the database for additional security
+- Use proper authentication middleware to ensure only authorized users can access the API
 
 ## Usage
 
