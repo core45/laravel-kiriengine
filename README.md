@@ -24,6 +24,33 @@ KIRIENGINE_WEBHOOK_SECRET=your_webhook_secret_here
 KIRIENGINE_WEBHOOK_PATH=kiri-engine-webhook
 ```
 
+## Quick Start
+
+### Fluent API Key Setting
+
+The easiest way to use KIRI Engine with a specific API key:
+
+```php
+use Core45\LaravelKiriengine\Facades\Kiriengine;
+
+// Set API key and chain methods
+$result = Kiriengine::setApiKey('your_api_key_here')
+    ->uploadPhotoScan()
+    ->imageUpload($images);
+
+// Clear the API key when done
+Kiriengine::clearApiKey();
+```
+
+### Standard Usage
+
+```php
+use Core45\LaravelKiriengine\Facades\Kiriengine;
+
+// Uses configured API key (from .env or resolver)
+$result = Kiriengine::uploadPhotoScan()->imageUpload($images);
+```
+
 ## Multi-Tenant Support
 
 The package now supports multi-tenant applications where each user has their own KIRI Engine API key. You can easily configure the package to retrieve API keys from the authenticated user or any other source.
@@ -121,7 +148,32 @@ You can create more complex resolvers for different scenarios:
 
 When using KIRI Engine in jobs, commands, or other contexts where authentication isn't available, you can explicitly set the API key.
 
-### Using the Trait (Recommended)
+### Fluent API Key Setting (Recommended)
+
+```php
+use Core45\LaravelKiriengine\Facades\Kiriengine;
+
+class ProcessKiriUploadJob implements ShouldQueue
+{
+    public function __construct(
+        private string $apiKey,
+        private array $images
+    ) {}
+
+    public function handle()
+    {
+        // Set API key and use KIRI Engine
+        $result = Kiriengine::setApiKey($this->apiKey)
+            ->uploadPhotoScan()
+            ->imageUpload($this->images);
+
+        // Clear the API key when done
+        Kiriengine::clearApiKey();
+    }
+}
+```
+
+### Using the Trait
 
 1. **Add the trait to your job or command:**
 
@@ -193,26 +245,30 @@ class ProcessKiriUploadJob implements ShouldQueue
 ### Command Example
 
 ```php
-use Core45\LaravelKiriengine\Traits\WithKiriEngineApiKey;
+use Core45\LaravelKiriengine\Facades\Kiriengine;
 
 class ProcessUserUploadsCommand extends Command
 {
-    use WithKiriEngineApiKey;
-
     protected $signature = 'kiri:process-uploads {userId}';
 
     public function handle()
     {
         $userId = $this->argument('userId');
+        $user = User::findOrFail($userId);
         
-        // Set API key for this user
-        $this->withUserIdKiriEngineApiKey($userId);
+        // Set API key and process uploads
+        $result = Kiriengine::setApiKey($user->kiri_api_key)
+            ->uploadPhotoScan()
+            ->imageUpload($this->getUserImages($userId));
 
-        // Process uploads
-        $uploader = new UploadPhotoScan();
-        // ... your logic here
+        $this->info('Upload completed successfully!');
+        Kiriengine::clearApiKey();
+    }
 
-        $this->clearKiriEngineApiKey();
+    private function getUserImages(int $userId): array
+    {
+        // Your logic to get user images
+        return [];
     }
 }
 ```
@@ -230,52 +286,35 @@ The package resolves API keys in this order:
 ### Photo Scanning
 
 ```php
-use Core45\LaravelKiriengine\Kiriengine\UploadPhotoScan;
+use Core45\LaravelKiriengine\Facades\Kiriengine;
 
-$uploader = new UploadPhotoScan();
+// With specific API key
+$result = Kiriengine::setApiKey('user_api_key')
+    ->uploadPhotoScan()
+    ->imageUpload($images);
 
-// Memory-efficient: Use file paths directly
-$images = [
-    '/path/to/image1.jpg',
-    '/path/to/image2.jpg',
-    // ... more images
-];
-
-$result = $uploader->imageUpload($images);
+// With configured API key
+$result = Kiriengine::uploadPhotoScan()->imageUpload($images);
 ```
 
 ### Object Scanning
 
 ```php
-use Core45\LaravelKiriengine\Kiriengine\UploadObjectScan;
+use Core45\LaravelKiriengine\Facades\Kiriengine;
 
-$uploader = new UploadObjectScan();
-
-// Memory-efficient: Use file paths directly
-$images = [
-    '/path/to/image1.jpg',
-    '/path/to/image2.jpg',
-    // ... more images
-];
-
-$result = $uploader->objectUpload($images);
+$result = Kiriengine::setApiKey('user_api_key')
+    ->uploadObjectScan()
+    ->imageUpload($images);
 ```
 
 ### 3DGS Scanning
 
 ```php
-use Core45\LaravelKiriengine\Kiriengine\Upload3DgsScan;
+use Core45\LaravelKiriengine\Facades\Kiriengine;
 
-$uploader = new Upload3DgsScan();
-
-// Memory-efficient: Use file paths directly
-$images = [
-    '/path/to/image1.jpg',
-    '/path/to/image2.jpg',
-    // ... more images
-];
-
-$result = $uploader->imageUpload($images);
+$result = Kiriengine::setApiKey('user_api_key')
+    ->upload3DgsScan()
+    ->imageUpload($images);
 ```
 
 ### Model Status and Download
@@ -284,10 +323,14 @@ $result = $uploader->imageUpload($images);
 use Core45\LaravelKiriengine\Facades\Kiriengine;
 
 // Get model status
-$status = Kiriengine::model3d()->getStatus('your_serial_number');
+$status = Kiriengine::setApiKey('user_api_key')
+    ->model3d()
+    ->getStatus('your_serial_number');
 
 // Get download link for completed model
-$downloadInfo = Kiriengine::model3d()->getDownloadLink('your_serial_number');
+$downloadInfo = Kiriengine::setApiKey('user_api_key')
+    ->model3d()
+    ->getDownloadLink('your_serial_number');
 ```
 
 ### Balance Check
@@ -296,7 +339,9 @@ $downloadInfo = Kiriengine::model3d()->getDownloadLink('your_serial_number');
 use Core45\LaravelKiriengine\Facades\Kiriengine;
 
 // Check your KIRI Engine balance
-$balance = Kiriengine::balance()->getBalance();
+$balance = Kiriengine::setApiKey('user_api_key')
+    ->balance()
+    ->getBalance();
 ```
 
 ## File Upload Methods
@@ -351,7 +396,9 @@ $batchSize = 50;
 
 for ($i = 0; $i < count($allImages); $i += $batchSize) {
     $batch = array_slice($allImages, $i, $batchSize);
-    $result = $uploader->imageUpload($batch);
+    $result = Kiriengine::setApiKey('user_api_key')
+        ->uploadPhotoScan()
+        ->imageUpload($batch);
     // Process result...
 }
 ```
@@ -367,7 +414,9 @@ foreach ($product->modelscans as $photo) {
     $images[] = $photo->getPath(); // Returns full file path
 }
 
-$result = $uploader->imageUpload($images);
+$result = Kiriengine::setApiKey('user_api_key')
+    ->uploadPhotoScan()
+    ->imageUpload($images);
 ```
 
 ## API Parameters

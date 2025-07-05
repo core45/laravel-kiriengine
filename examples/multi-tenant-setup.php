@@ -68,14 +68,27 @@ class UserProfileController extends Controller
 */
 
 // 5. Usage in your application
+
+// 5a. Fluent API Key Setting (NEW - Recommended)
+/*
+use Core45\LaravelKiriengine\Facades\Kiriengine;
+
+// Set API key and chain methods
+$result = Kiriengine::setApiKey('user_specific_api_key')
+    ->uploadPhotoScan()
+    ->imageUpload($images);
+
+// Clear when done
+Kiriengine::clearApiKey();
+*/
+
+// 5b. Standard usage (uses configured resolver)
 /*
 // The API key will automatically be retrieved from the authenticated user
 public function uploadPhotos(Request $request)
 {
     try {
-        $uploader = new \Core45\LaravelKiriengine\Kiriengine\UploadPhotoScan();
-        $result = $uploader->imageUpload($request->file('images'));
-        
+        $result = Kiriengine::uploadPhotoScan()->imageUpload($request->file('images'));
         return response()->json($result);
     } catch (\Exception $e) {
         return response()->json(['error' => $e->getMessage()], 400);
@@ -151,7 +164,35 @@ $uploader = new \Core45\LaravelKiriengine\Kiriengine\UploadPhotoScan();
 
 // 8. Using in Jobs (NEW!)
 
-// Example 1: Job with trait
+// Example 1: Job with fluent API key setting (Recommended)
+/*
+use Core45\LaravelKiriengine\Facades\Kiriengine;
+
+class ProcessKiriUploadJob implements ShouldQueue
+{
+    public function __construct(
+        private string $apiKey,
+        private array $images
+    ) {}
+
+    public function handle()
+    {
+        // Set API key and use KIRI Engine
+        $result = Kiriengine::setApiKey($this->apiKey)
+            ->uploadPhotoScan()
+            ->imageUpload($this->images);
+
+        // Clear the API key when done
+        Kiriengine::clearApiKey();
+    }
+}
+
+// Dispatch the job
+$user = User::find($userId);
+ProcessKiriUploadJob::dispatch($user->kiri_api_key, $images);
+*/
+
+// Example 2: Job with trait
 /*
 use Core45\LaravelKiriengine\Traits\WithKiriEngineApiKey;
 use Core45\LaravelKiriengine\Kiriengine\UploadPhotoScan;
@@ -183,7 +224,7 @@ class ProcessKiriUploadJob implements ShouldQueue
 ProcessKiriUploadJob::dispatch($userId, $images);
 */
 
-// Example 2: Job with manual API key setting
+// Example 3: Job with manual API key setting
 /*
 use Core45\LaravelKiriengine\Services\KiriEngineApiKeyResolver;
 
@@ -213,7 +254,7 @@ $user = User::find($userId);
 ProcessKiriUploadJob::dispatch($user->kiri_api_key, $images);
 */
 
-// Example 3: Job with user model
+// Example 4: Job with user model
 /*
 use Core45\LaravelKiriengine\Traits\WithKiriEngineApiKey;
 
@@ -246,7 +287,40 @@ ProcessKiriUploadJob::dispatch($user, $images);
 
 // 9. Using in Commands (NEW!)
 
-// Example 1: Command with trait
+// Example 1: Command with fluent API key setting (Recommended)
+/*
+use Core45\LaravelKiriengine\Facades\Kiriengine;
+
+class ProcessUserUploadsCommand extends Command
+{
+    protected $signature = 'kiri:process-uploads {userId}';
+
+    public function handle()
+    {
+        $userId = $this->argument('userId');
+        $user = User::findOrFail($userId);
+        
+        // Set API key and process uploads
+        $result = Kiriengine::setApiKey($user->kiri_api_key)
+            ->uploadPhotoScan()
+            ->imageUpload($this->getUserImages($userId));
+
+        $this->info('Upload completed successfully!');
+        Kiriengine::clearApiKey();
+    }
+
+    private function getUserImages(int $userId): array
+    {
+        // Your logic to get user images
+        return [];
+    }
+}
+
+// Run the command
+// php artisan kiri:process-uploads 123
+*/
+
+// Example 2: Command with trait
 /*
 use Core45\LaravelKiriengine\Traits\WithKiriEngineApiKey;
 use Core45\LaravelKiriengine\Kiriengine\UploadPhotoScan;
@@ -279,12 +353,9 @@ class ProcessUserUploadsCommand extends Command
         return [];
     }
 }
-
-// Run the command
-// php artisan kiri:process-uploads 123
 */
 
-// Example 2: Command with manual API key
+// Example 3: Command with manual API key
 /*
 use Core45\LaravelKiriengine\Services\KiriEngineApiKeyResolver;
 
@@ -330,7 +401,7 @@ class UploadController extends Controller
 
         // Dispatch job with user's API key
         ProcessKiriUploadJob::dispatch(
-            auth()->id(),
+            auth()->user()->kiri_api_key,
             $imagePaths
         );
 
@@ -363,4 +434,66 @@ KiriEngineApiKeyResolver::setApiKey('explicit_key_123');
 /*
 // KIRIENGINE_API_KEY=fallback_key_456 in .env
 // This will be used if resolver returns null
+*/
+
+// 12. Fluent API Key Setting Examples (NEW!)
+
+// Example 1: Basic usage
+/*
+$result = Kiriengine::setApiKey('user_api_key_123')
+    ->uploadPhotoScan()
+    ->imageUpload($images);
+*/
+
+// Example 2: Multiple operations with same API key
+/*
+$kiri = Kiriengine::setApiKey('user_api_key_123');
+
+// Upload photos
+$photoResult = $kiri->uploadPhotoScan()->imageUpload($photoImages);
+
+// Check balance
+$balance = $kiri->balance()->getBalance();
+
+// Get model status
+$status = $kiri->model3d()->getStatus('serial_number');
+
+// Clear when done
+Kiriengine::clearApiKey();
+*/
+
+// Example 3: In a service class
+/*
+class KiriService
+{
+    public function processUserUpload(int $userId, array $images)
+    {
+        $user = User::findOrFail($userId);
+        
+        try {
+            $result = Kiriengine::setApiKey($user->kiri_api_key)
+                ->uploadPhotoScan()
+                ->imageUpload($images);
+                
+            return $result;
+        } finally {
+            Kiriengine::clearApiKey();
+        }
+    }
+}
+*/
+
+// Example 4: With error handling
+/*
+try {
+    $result = Kiriengine::setApiKey($user->kiri_api_key)
+        ->uploadPhotoScan()
+        ->imageUpload($images);
+} catch (\Exception $e) {
+    // Handle error
+    Log::error('KIRI Engine upload failed: ' . $e->getMessage());
+    throw $e;
+} finally {
+    Kiriengine::clearApiKey();
+}
 */ 

@@ -5,6 +5,8 @@ namespace Core45\LaravelKiriengine\Facades;
 use Illuminate\Support\Facades\Facade;
 
 /**
+ * @method static \Core45\LaravelKiriengine\Kiriengine setApiKey(string $apiKey)
+ * @method static void clearApiKey()
  * @method static \Core45\LaravelKiriengine\Kiriengine\Balance balance()
  * @method static \Core45\LaravelKiriengine\Kiriengine\Model3d model3d()
  * @method static \Core45\LaravelKiriengine\Kiriengine\Upload3DgsScan Upload3DgsScan()
