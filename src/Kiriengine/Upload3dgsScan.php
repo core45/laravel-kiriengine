@@ -9,6 +9,7 @@ class Upload3DgsScan
 {
     protected string $baseUrl;
     protected string $apiKey;
+    protected bool $debug;
 
     public function __construct()
     {
@@ -17,6 +18,8 @@ class Upload3DgsScan
         // Use the API key resolver service
         $apiKeyResolver = app(KiriEngineApiKeyResolver::class);
         $this->apiKey = $apiKeyResolver->getApiKey();
+        
+        $this->debug = config('laravel-kiriengine.debug', false);
     }
 
     /**
@@ -75,6 +78,7 @@ class Upload3DgsScan
                 'Authorization: Bearer ' . $this->apiKey,
             ],
             CURLOPT_TIMEOUT => 900, // 15 minutes timeout for large uploads
+            CURLOPT_VERBOSE => $this->debug,
         ]);
 
         $response = curl_exec($curl);
@@ -153,6 +157,7 @@ class Upload3DgsScan
             ],
             CURLOPT_TIMEOUT => 900, // 15 minutes timeout for large uploads
             CURLOPT_CONNECTTIMEOUT => 30,
+            CURLOPT_VERBOSE => $this->debug,
         ]);
 
         $response = curl_exec($curl);

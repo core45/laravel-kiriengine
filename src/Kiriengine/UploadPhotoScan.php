@@ -9,6 +9,7 @@ class UploadPhotoScan
 {
     protected string $baseUrl;
     protected string $apiKey;
+    protected bool $debug;
 
     public function __construct()
     {
@@ -17,6 +18,8 @@ class UploadPhotoScan
         // Use the API key resolver service
         $apiKeyResolver = app(KiriEngineApiKeyResolver::class);
         $this->apiKey = $apiKeyResolver->getApiKey();
+        
+        $this->debug = config('laravel-kiriengine.debug', false);
     }
 
     /**
@@ -79,6 +82,7 @@ class UploadPhotoScan
                 'Authorization: Bearer ' . $this->apiKey,
             ],
             CURLOPT_TIMEOUT => 900, // 15 minutes timeout for large uploads
+            CURLOPT_VERBOSE => $this->debug,
         ]);
 
         $response = curl_exec($curl);
@@ -163,6 +167,7 @@ class UploadPhotoScan
             ],
             CURLOPT_TIMEOUT => 900, // 15 minutes timeout for large uploads
             CURLOPT_CONNECTTIMEOUT => 30,
+            CURLOPT_VERBOSE => $this->debug,
         ]);
 
         $response = curl_exec($curl);
