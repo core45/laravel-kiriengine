@@ -5,7 +5,7 @@ namespace Core45\LaravelKiriengine\Kiriengine;
 use Core45\LaravelKiriengine\Exceptions\KiriengineException;
 use Core45\LaravelKiriengine\Services\KiriEngineApiKeyResolver;
 
-class Upload3DgsScan
+class Upload3dgsScan
 {
     protected string $baseUrl;
     protected string $apiKey;

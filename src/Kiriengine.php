@@ -4,7 +4,7 @@ namespace Core45\LaravelKiriengine;
 
 use Core45\LaravelKiriengine\Kiriengine\Balance;
 use Core45\LaravelKiriengine\Kiriengine\Model3d;
-use Core45\LaravelKiriengine\Kiriengine\Upload3DgsScan;
+use Core45\LaravelKiriengine\Kiriengine\Upload3dgsScan;
 use Core45\LaravelKiriengine\Kiriengine\UploadObjectScan;
 use Core45\LaravelKiriengine\Kiriengine\UploadPhotoScan;
 use Core45\LaravelKiriengine\Services\KiriEngineApiKeyResolver;
@@ -43,9 +43,9 @@ class Kiriengine
         return new Model3d();
     }
 
-    public function upload3DgsScan(): Upload3DgsScan
+    public function upload3dgsScan(): Upload3dgsScan
     {
-        return new Upload3DgsScan();
+        return new Upload3dgsScan();
     }
 
     public function uploadObjectScan(): UploadObjectScan
